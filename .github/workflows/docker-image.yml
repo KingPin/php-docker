@@ -71,10 +71,17 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}
     -
-      name: Test
+      name: Test php
+      if: matrix.php-type != 'apache'
       run: |
         docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -v
         docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -m
+    -
+      name: Test apache
+      if: matrix.php-type == 'apache'
+      run: |
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -v
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -l
     - 
       name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -101,8 +108,8 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}
         tags: |
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
-          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php:${{ matrix.php-version }}-${{ matrix.php-type }}
+          ghcr.io/kingpin/php:${{ matrix.php-version }}-${{ matrix.php-type }}
           quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
           ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
