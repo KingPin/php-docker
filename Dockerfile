@@ -1,3 +1,4 @@
+ARG VERSION=latest
 FROM php:${VERSION}
 
 RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
