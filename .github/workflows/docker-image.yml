@@ -1,0 +1,106 @@
+name: Docker Image CI
+
+on:
+  schedule:
+    - cron: '31 16 * * 1'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.php-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php-type:
+          - cli
+          - fpm
+          - apache
+          - zts
+        php-version: 
+          - 8
+          - 7
+        os: 
+          - ubuntu-latest
+#    if: "!contains(github.event.head_commit.message, '[skip nix]')"
+  
+    steps:
+    - 
+      name: Repo Name
+      id: repo-name
+      run: echo "::set-output name=value::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
+    - 
+      name: Docker Setup QEMU
+      uses: docker/setup-qemu-action@v1
+      id: qemu
+      with:
+        platforms: amd64,arm64
+    - 
+      name: Docker Setup Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+    - 
+      name: Login to DockerHub registry
+      uses: docker/login-action@v1 
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - 
+      name: Log into ghcr.io registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    -
+      name: Login to Quay.io registry
+      uses: docker/login-action@v1
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+    -
+      name: Build and test docker image
+      uses: docker/build-push-action@v2
+      env:
+        VERSION: ${{ matrix.php-version }}-${{ matrix.php-type }}
+      with:
+        load: true
+        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    -
+      name: Test
+      run: |
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -v
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -m
+    - 
+      name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: image
+        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
+        format: 'template'
+        template: '@/contrib/sarif.tpl'
+        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}.sarif'
+        severity: 'MEDIUM,CRITICAL,HIGH'
+        hide-progress: false
+    - 
+      name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v1
+      with:
+        sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}.sarif'
+    - 
+      name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      env:
+        VERSION: ${{ matrix.php-version }}-${{ matrix.php-type }}
+      with:
+        platforms: linux/amd64,linux/arm64
+        push: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        tags: |
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
+          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
+          quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
