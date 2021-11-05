@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.php-version }}
+    name: ${{ matrix.php-version }}-${{ matrix.php-type }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -104,3 +104,6 @@ jobs:
           docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
+          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
+          quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
