@@ -1,0 +1,53 @@
+version: 2.1
+commands:
+  setup:
+    steps:
+      - checkout
+      - run:
+          name: Setup buildx and qemu
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y qemu-user-static
+            sudo apt-get install -y binfmt-support
+      - run:
+          name: Check versions
+          command: |
+            qemu-aarch64-static --version
+            update-binfmts --version 
+      - run:
+          name: Create builder
+          command: |
+            export DOCKER_CLI_EXPERIMENTAL=enabled
+            docker buildx create --name php-docker
+            docker buildx use php-docker
+            docker buildx inspect --bootstrap
+jobs:
+  build:
+    parameters:
+      php-version:
+        type: string
+      php-type:
+        type: string
+    machine:
+      image: ubuntu-2004:202107-02
+    steps:
+      - setup
+      - run:
+          name: Login to Docker Hub
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - run:
+          name: Build multiarch docker image and push
+          command: |
+            DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --platform linux/arm64,linux/amd64 --build-arg VERSION=<< parameters.php-version >>-<< parameters.php-type >> --push -t kingpin/php-docker:<< parameters.php-version >>-<< parameters.php-type >> .
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build:
+          matrix:
+            parameters:
+              php-version: ["7", "8"]
+              php-type: ["cli", "fpm", "apache"]
+          context:
+            - DOCKER_HUB
