@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: ${{ matrix.php-version }}-${{ matrix.php-type }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -20,8 +20,6 @@ jobs:
         php-version: 
           - 8
           - 7
-        os: 
-          - ubuntu-latest
 #    if: "!contains(github.event.head_commit.message, '[skip nix]')"
   
     steps:
@@ -111,6 +109,3 @@ jobs:
           docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
-          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
-          quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:latest-${{ matrix.php-type }}
