@@ -71,7 +71,7 @@ jobs:
         tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}
+        build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
     -
       name: Test php
       if: matrix.php-type != 'apache'
