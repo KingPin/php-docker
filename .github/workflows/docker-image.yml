@@ -18,8 +18,12 @@ jobs:
           - apache
 #          - zts
         php-version: 
+          - 8.1
           - 8
           - 7
+        php-base-os: 
+          - bullseye
+          - alpine
 #    if: "!contains(github.event.head_commit.message, '[skip nix]')"
   
     steps:
@@ -97,15 +101,16 @@ jobs:
       with:
         sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}.sarif'
     - 
-      name: Build and push Docker image
+      name: Build and push Docker debian image
       uses: docker/build-push-action@v2
       with:
         platforms: linux/amd64,linux/arm64
         push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}
+        build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
         tags: |
           docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
           quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
+
