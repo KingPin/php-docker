@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.php-version }}-${{ matrix.php-type }}
+    name: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -65,7 +65,7 @@ jobs:
       name: Build and test docker image
       uses: docker/build-push-action@v2
       env:
-        VERSION: ${{ matrix.php-version }}-${{ matrix.php-type }}
+        VERSION: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
       with:
         load: true
         tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
@@ -92,14 +92,14 @@ jobs:
         image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
         format: 'template'
         template: '@/contrib/sarif.tpl'
-        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}.sarif'
+        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}.sarif'
         severity: 'MEDIUM,CRITICAL,HIGH'
         hide-progress: false
     - 
       name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v1
       with:
-        sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}.sarif'
+        sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}.sarif'
     - 
       name: Build and push Docker debian image
       uses: docker/build-push-action@v2
@@ -110,7 +110,7 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
         tags: |
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
-          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
-          quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
+          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
+          quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ php-base-os }}
 
