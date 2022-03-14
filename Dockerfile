@@ -2,9 +2,7 @@ ARG VERSION=latest
 ARG BASEOS=bullseye
 FROM php:${VERSION}
 
-RUN if [[ -z "$BASEOS" ]] ; then echo Argument not provided ; else echo Argument is $arg ; fi
-
-RUN if [ "$BASEOS" == "bullseye" ]; then \
+RUN if [ "$BASEOS" = "bullseye" ]; then \
         curl -sSLf -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
         chmod +x /usr/local/bin/install-php-extensions && \
@@ -15,7 +13,7 @@ RUN if [ "$BASEOS" == "bullseye" ]; then \
           opcache pdo_mysql pdo_pgsql pgsql redis soap sockets tidy timezonedb uuid xsl yaml zip zstd @composer && \
         if command -v a2enmod; then a2enmod rewrite; fi && \
         rm -rf /var/lib/apt/lists/* \
-    elif [ "$BASEOS" == "alpine" ]; then \
+    elif [ "$BASEOS" = "alpine" ]; then \
         apk --update add curl git zip unzip && \
         curl -sSLf -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
