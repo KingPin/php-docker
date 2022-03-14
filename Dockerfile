@@ -14,7 +14,7 @@ RUN if [ "$BASEOS" == "bullseye" ]; then \
         install-php-extensions bcmath bz2 calendar ctype exif gd intl imagick imap json mbstring ldap memcached mongodb mysqli \
           opcache pdo_mysql pdo_pgsql pgsql redis soap sockets tidy timezonedb uuid xsl yaml zip zstd @composer && \
         if command -v a2enmod; then a2enmod rewrite; fi && \
-        rm -rf /var/lib/apt/lists/*
+        rm -rf /var/lib/apt/lists/* \
     elif [ "$BASEOS" == "alpine" ]; then \
         apk --update add curl git zip unzip && \
         curl -sSLf -o /usr/local/bin/install-php-extensions \
