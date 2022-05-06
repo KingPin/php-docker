@@ -36,7 +36,7 @@ jobs:
       run: echo "::set-output name=value::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
     - 
       name: Docker Setup QEMU
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v2
       id: qemu
       with:
         platforms: amd64,arm64
