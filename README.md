@@ -32,9 +32,10 @@ Contains the following php extensions :
  - intl 
  - imagick
  - imap
- - json 
+ - json
+ - ldap
  - mbstring
- -  ldap
+ - mcrypt
  - memcached
  - mongodb
  - mysqli
