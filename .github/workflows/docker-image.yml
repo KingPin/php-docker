@@ -18,10 +18,10 @@ jobs:
           - apache
 #          - zts
         php-version: 
-          - 8.2-rc
-          - 8.1
-          - 8.0
-          - 7
+          - '8.2-rc'
+          - '8.1'
+          - '8.0'
+          - '7'
         php-base-os: 
           - bullseye
           - alpine
