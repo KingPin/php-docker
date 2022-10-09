@@ -69,13 +69,17 @@ jobs:
       name: Build and test docker image
       uses: docker/build-push-action@v3
       env:
-        VERSION: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        VERSION: |
+          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          BASEOS=${{ matrix.php-base-os }}
       with:
         load: true
         tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        build-args: VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        build-args: |
+          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          BASEOS=${{ matrix.php-base-os }}
     -
       name: Test php
       if: matrix.php-type != 'apache'
@@ -107,8 +111,13 @@ jobs:
     - 
       name: Build and push Docker debian image
       uses: docker/build-push-action@v3
+      env:
+        VERSION: |
+          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          BASEOS=${{ matrix.php-base-os }}
       with:
         platforms: linux/amd64,linux/arm64
+        load: true
         push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
