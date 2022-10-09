@@ -10,11 +10,11 @@ Following tags exist in both amd64 && arm64/aarch64:
  - 7-fpm-bullseye 
  - 7-fpm-alpine
  - 7-apache-bullseye 
- - 8-cli-bullseye 
- - 8-cli-alpine 
- - 8-apache-bullseye
- - 8-fpm-bullseye
- - 8-fpm-alpine
+ - 8.0-cli-bullseye 
+ - 8.0-cli-alpine 
+ - 8.0-apache-bullseye
+ - 8.0-fpm-bullseye
+ - 8.0-fpm-alpine
  - 8.1-fpm-bullseye
  - 8.1-fpm-alpine
  - 8.1-apache-bullseye
@@ -23,6 +23,7 @@ Following tags exist in both amd64 && arm64/aarch64:
 
 Contains the following php extensions : 
 
+ - amqp
  - bcmath 
  - bz2
  - calendar
@@ -45,10 +46,12 @@ Contains the following php extensions :
  - pgsql
  - redis
  - soap
+ - snmp
  - sockets
  - tidy
  - timezonedb
  - uuid
+ - vips
  - xsl 
  - yaml
  - zip
