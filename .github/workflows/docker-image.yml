@@ -73,7 +73,7 @@ jobs:
 #          BASEOS=${{ matrix.php-base-os }}
       with:
         load: true
-        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
+        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
@@ -83,24 +83,24 @@ jobs:
       name: Test php
       if: matrix.php-type != 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -m
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
     -
       name: Test apache
       if: matrix.php-type == 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test -l
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
     - 
       name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: image
-        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
-        format: 'template'
-        template: '@/contrib/sarif.tpl'
+        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        format: 'sarif'
+#        template: '@/contrib/sarif.tpl'
         output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
-        severity: 'MEDIUM,CRITICAL,HIGH'
+        severity: 'CRITICAL,HIGH'
         hide-progress: false
     - 
       name: Upload Trivy scan results to GitHub Security tab
