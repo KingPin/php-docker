@@ -20,6 +20,11 @@ Following tags exist in both amd64 && arm64/aarch64:
  - 8.1-apache-bullseye
  - 8.1-cli-bullseye
  - 8.1-cli-alpine
+ - 8.2-fpm-bullseye
+ - 8.2-fpm-alpine
+ - 8.2-apache-bullseye
+ - 8.2-cli-bullseye
+ - 8.2-cli-alpine
 
 Contains the following php extensions : 
 
