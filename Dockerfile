@@ -29,6 +29,13 @@ RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
           opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer;
 
 # add mcrypt for all php versions less than 8.2
-RUN if [ "$PHPVERSION" -lt "8.2" ]; then \
-        install-php-extensions mcrypt; \
-    fi
+RUN case "$PHPVERSION" in \
+        7|7.1|8.0) \
+            install-php-extensions mcrypt \
+            ;; \
+        *) \
+            echo no mcrypt needed for php > 8.2; \
+            echo PHP version: $PHPVERSION \
+            ;; \
+    esac
+
