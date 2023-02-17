@@ -15,7 +15,7 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
 
 # install dependencies for alpine
 RUN if [ "$BASEOS" = "alpine" ]; then \
-        apk --update add --no-cache curl git zip unzip ghostscript imagemagick \
+        apk --update add --no-cache curl git zip unzip ghostscript imagemagick; \
     fi
 
 # enable apache rewrite mod
