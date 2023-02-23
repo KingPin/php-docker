@@ -30,7 +30,7 @@ RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
 
 # add mcrypt for all php versions less than 8.2
 RUN case "$PHPVERSION" in \
-        7|7.1|8.0) \
+        7|8.0|8.1) \
             install-php-extensions mcrypt \
             ;; \
         *) \
