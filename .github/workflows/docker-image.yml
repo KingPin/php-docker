@@ -16,7 +16,6 @@ jobs:
           - cli
           - fpm
           - apache
-#          - zts
         php-version: 
           - '8.2'
           - '8.1'
@@ -32,10 +31,9 @@ jobs:
   
     steps:
     - 
-      name: Repo Name
-      id: repo-name
-      run: echo "::set-output name=value::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
-    - 
+      name: Print env
+      run: env | sort
+    -
       name: Docker Setup QEMU
       uses: docker/setup-qemu-action@v2
       id: qemu
@@ -73,7 +71,7 @@ jobs:
 #          BASEOS=${{ matrix.php-base-os }}
       with:
         load: true
-        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
@@ -83,25 +81,24 @@ jobs:
       name: Test php
       if: matrix.php-type != 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
     -
       name: Test apache
       if: matrix.php-type == 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
     - 
       name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: image
-        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         format: 'sarif'
-#        template: '@/contrib/sarif.tpl'
-        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
         severity: 'CRITICAL,HIGH'
         hide-progress: false
+        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
     - 
       name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
@@ -123,7 +120,7 @@ jobs:
           PHPVERSION=${{ matrix.php-version }}
           BASEOS=${{ matrix.php-base-os }}
         tags: |
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 
