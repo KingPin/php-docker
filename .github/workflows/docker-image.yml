@@ -30,14 +30,15 @@ jobs:
 #    if: "!contains(github.event.head_commit.message, '[skip nix]')"
   
     steps:
-    - name: Print
+    - 
+      name: Print env
       run: env | sort
     - 
       name: Repo Name
       id: repo-name
       #run: echo "::set-output name=value::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
       run: |
-        - echo "repo_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_OUTPUT
+        - echo "repo_nameE=${{ github.event.repository.name }}" >> $GITHUB_ENV
         - echo ${{ env.repo_name }}
     -
       name: Docker Setup QEMU
