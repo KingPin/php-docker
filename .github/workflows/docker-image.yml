@@ -30,6 +30,8 @@ jobs:
 #    if: "!contains(github.event.head_commit.message, '[skip nix]')"
   
     steps:
+    - name: Print
+      run: env | sort
     - 
       name: Repo Name
       id: repo-name
