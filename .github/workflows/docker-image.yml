@@ -38,8 +38,8 @@ jobs:
       id: repo-name
       #run: echo "::set-output name=value::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
       run: |
-        - echo "repo_nameE=${{ github.event.repository.name }}" >> $GITHUB_ENV
-        - echo ${{ env.repo_name }}
+        echo "repo_nameE=${{ github.event.repository.name }}" >> $GITHUB_ENV
+        echo ${{ env.repo_name }}
     -
       name: Docker Setup QEMU
       uses: docker/setup-qemu-action@v2
