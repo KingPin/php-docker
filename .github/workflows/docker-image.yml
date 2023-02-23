@@ -38,7 +38,7 @@ jobs:
       uses: docker/setup-qemu-action@v2
       id: qemu
       with:
-        platforms: amd64,arm64
+        platforms: amd64,arm64,arm
     - 
       name: Docker Setup Buildx
       id: buildx
@@ -111,7 +111,7 @@ jobs:
 #          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 #          BASEOS=${{ matrix.php-base-os }}
       with:
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
