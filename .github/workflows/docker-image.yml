@@ -13,17 +13,17 @@ jobs:
       fail-fast: false
       matrix:
         php-type:
-          - cli
+#          - cli
           - fpm
-          - apache
+#          - apache
         php-version: 
           - '8.2'
-          - '8.1'
-          - '8.0'
-          - '7'
+#          - '8.1'
+#          - '8.0'
+#          - '7'
         php-base-os: 
           - bullseye
-          - alpine
+#          - alpine
         exclude:
           - php-type: apache
             php-base-os: alpine
