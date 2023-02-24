@@ -9,7 +9,9 @@ ARG PHPVERSION
 RUN if [ "$BASEOS" = "bullseye" ]; then \
         DEBIAN_FRONTEND=noninteractive apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick libaom-dev && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript \
+          imagemagick libaom-dev libavif-dev libdav1d-dev libaom0 && \
+        apt install -t bullseye-backports libyuv-dev -y && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
