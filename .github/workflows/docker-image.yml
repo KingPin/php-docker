@@ -82,14 +82,14 @@ jobs:
       name: Test php
       if: matrix.php-type != 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
+        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
     -
       name: Test apache
       if: matrix.php-type == 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
+        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
     - 
       name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
