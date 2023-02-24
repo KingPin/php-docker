@@ -9,7 +9,7 @@ ARG PHPVERSION
 RUN if [ "$BASEOS" = "bullseye" ]; then \
         DEBIAN_FRONTEND=noninteractive apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick libaom-dev && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
