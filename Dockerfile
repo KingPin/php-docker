@@ -7,11 +7,12 @@ ARG PHPVERSION
 
 # install dependencies for debian
 RUN if [ "$BASEOS" = "bullseye" ]; then \
+        echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/bullseye-backports.list  && \
         DEBIAN_FRONTEND=noninteractive apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript \
           imagemagick libaom-dev libavif-dev libdav1d-dev libaom0 && \
-        apt install -t bullseye-backports libyuv-dev -y && \
+        DEBIAN_FRONTEND=noninteractive apt install -t bullseye-backports libyuv-dev -y && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
