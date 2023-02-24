@@ -13,17 +13,17 @@ jobs:
       fail-fast: false
       matrix:
         php-type:
-#          - cli
+          - cli
           - fpm
-#          - apache
+          - apache
         php-version: 
           - '8.2'
-#          - '8.1'
-#          - '8.0'
-#          - '7'
+          - '8.1'
+          - '8.0'
+          - '7'
         php-base-os: 
           - bullseye
-#          - alpine
+          - alpine
         exclude:
           - php-type: apache
             php-base-os: alpine
@@ -71,7 +71,8 @@ jobs:
 #          BASEOS=${{ matrix.php-base-os }}
       with:
         load: true
-        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        tags: ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
@@ -94,7 +95,7 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: image
-        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        image-ref: ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         format: 'sarif'
         severity: 'CRITICAL,HIGH'
         hide-progress: false
@@ -104,6 +105,17 @@ jobs:
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
+    -
+      name: Delete all containers from package without tags
+      uses: Chizkiyahu/delete-untagged-ghcr-action@v2
+      with:
+        token: ${{ secrets.PAT_TOKEN }}
+        repository_owner: ${{ github.repository_owner }}
+        repository: ${{ github.repository }}
+        package_name: php-docker
+        untagged_only: true
+#        owner_type: org # or user
+#        except_untagged_multiplatform: true
     - 
       name: Build and push Docker debian image
       uses: docker/build-push-action@v4
@@ -112,9 +124,11 @@ jobs:
 #          BASEOS=${{ matrix.php-base-os }}
       with:
         platforms: linux/amd64,linux/arm64,linux/arm/v7
-        push: true
+#        push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-contexts: |
+          ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         build-args: |
           VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
           PHPVERSION=${{ matrix.php-version }}
