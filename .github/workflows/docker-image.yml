@@ -34,6 +34,13 @@ jobs:
       name: Print env
       run: env | sort
     -
+      name: Checkout source
+      uses: actions/checkout@v3.3.0
+      with:
+        # Repository name with owner. For example, actions/checkout
+        repository: ${{ github.repository }}
+        token: ${{ github.token }}
+    -
       name: Docker Setup QEMU
       uses: docker/setup-qemu-action@v2
       id: qemu
@@ -117,25 +124,31 @@ jobs:
 #        untagged_only: true
 #        owner_type: org # or user
 #        except_untagged_multiplatform: true
-    - 
-      name: Build and push Docker debian image
-      uses: docker/build-push-action@v4
-#      env: |
+#    - 
+#      name: Build and push Docker image
+#      uses: docker/build-push-action@v4
+##      env: |
 #          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 #          BASEOS=${{ matrix.php-base-os }}
-      with:
-        platforms: linux/amd64,linux/arm64,linux/arm/v7
+#      with:
+#        platforms: linux/amd64,linux/arm64,linux/arm/v7
 #        push: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        build-contexts: |
-          ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        build-args: |
-          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          PHPVERSION=${{ matrix.php-version }}
-          BASEOS=${{ matrix.php-base-os }}
-        tags: |
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-
+#        cache-from: type=gha
+#        cache-to: type=gha,mode=max
+#        build-contexts: |
+#          ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#        build-args: |
+#          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#          PHPVERSION=${{ matrix.php-version }}
+#          BASEOS=${{ matrix.php-base-os }}
+#        tags: |
+#          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+    - 
+      name: Push To Registry
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        #registry:
