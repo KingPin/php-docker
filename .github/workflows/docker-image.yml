@@ -149,6 +149,6 @@ jobs:
       name: Push To Registry
       uses: redhat-actions/push-to-registry@v2
       with:
-        image: ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        image: ${{ github.event.repository.name }}
         tags: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         registry: quay.io/kingpinx1
