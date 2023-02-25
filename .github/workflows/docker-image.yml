@@ -77,6 +77,7 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          PHPVERSION=${{ matrix.php-version }}
           BASEOS=${{ matrix.php-base-os }}
     -
       name: Test php
