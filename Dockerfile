@@ -10,9 +10,7 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
         echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/bullseye-backports.list  && \
         DEBIAN_FRONTEND=noninteractive apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript \
-          imagemagick libaom-dev libavif-dev libdav1d-dev libaom0 && \
-        DEBIAN_FRONTEND=noninteractive apt install -t bullseye-backports libyuv-dev -y && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
@@ -21,15 +19,16 @@ RUN if [ "$BASEOS" = "alpine" ]; then \
         apk --update add --no-cache curl git zip unzip ghostscript imagemagick; \
     fi
 
-# enable apache rewrite mod
-RUN if command -v a2enmod; then a2enmod rewrite; fi
-
 # add all needed php extensions
 RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
         chmod +x /usr/local/bin/install-php-extensions && \
-        install-php-extensions amqp bcmath bz2 calendar ctype exif gd intl imagick imap json mbstring ldap memcached mongodb mysqli \
-          opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer;
+        install-php-extensions amqp bcmath bz2 calendar ctype exif intl imagick imap json mbstring ldap memcached mongodb mysqli \
+          opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer && \
+        IPE_GD_WITHOUTAVIF=1 install-php-extensions gd;
+
+# enable apache rewrite mod
+RUN if command -v a2enmod; then a2enmod rewrite; fi
 
 # add mcrypt for all php versions less than 8.2
 RUN case "$PHPVERSION" in \
