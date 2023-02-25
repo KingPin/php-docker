@@ -34,11 +34,18 @@ jobs:
       name: Print env
       run: env | sort
     -
+      name: Checkout source
+      uses: actions/checkout@v3.3.0
+      with:
+        # Repository name with owner. For example, actions/checkout
+        repository: ${{ github.repository }}
+        token: ${{ github.token }}
+    -
       name: Docker Setup QEMU
       uses: docker/setup-qemu-action@v2
       id: qemu
       with:
-        platforms: amd64,arm64
+        platforms: amd64,arm64,arm
     - 
       name: Docker Setup Buildx
       id: buildx
@@ -70,31 +77,34 @@ jobs:
 #          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 #          BASEOS=${{ matrix.php-base-os }}
       with:
+        context: .
         load: true
-        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
           VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          PHPVERSION=${{ matrix.php-version }}
           BASEOS=${{ matrix.php-base-os }}
     -
       name: Test php
       if: matrix.php-type != 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
     -
       name: Test apache
       if: matrix.php-type == 'apache'
       run: |
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
     - 
       name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: image
-        image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         format: 'sarif'
         severity: 'CRITICAL,HIGH'
         hide-progress: false
@@ -105,16 +115,19 @@ jobs:
       with:
         sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
     - 
-      name: Build and push Docker debian image
+      name: Build and push Docker image
       uses: docker/build-push-action@v4
 #      env: |
 #          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 #          BASEOS=${{ matrix.php-base-os }}
       with:
-        platforms: linux/amd64,linux/arm64
+        context: .
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-contexts: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         build-args: |
           VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
           PHPVERSION=${{ matrix.php-version }}
