@@ -113,42 +113,31 @@ jobs:
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
-#    -
-#      name: Delete all containers from package without tags
-#      uses: Chizkiyahu/delete-untagged-ghcr-action@v2
-#      with:
-#        token: ${{ secrets.PAT_TOKEN }}
-#        repository_owner: ${{ github.repository_owner }}
-#        repository: ${{ github.repository }}
-#        package_name: php-docker
-#        untagged_only: true
-#        owner_type: org # or user
-#        except_untagged_multiplatform: true
-#    - 
-#      name: Build and push Docker image
-#      uses: docker/build-push-action@v4
-##      env: |
-#          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#          BASEOS=${{ matrix.php-base-os }}
-#      with:
-#        platforms: linux/amd64,linux/arm64,linux/arm/v7
-#        push: true
-#        cache-from: type=gha
-#        cache-to: type=gha,mode=max
-#        build-contexts: |
-#          ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#        build-args: |
-#          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#          PHPVERSION=${{ matrix.php-version }}
-#          BASEOS=${{ matrix.php-base-os }}
-#        tags: |
-#          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
     - 
-      name: Push To Registry
-      uses: redhat-actions/push-to-registry@v2
+      name: Build and push Docker image
+      uses: docker/build-push-action@v4
+#      env: |
+#          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#          BASEOS=${{ matrix.php-base-os }}
       with:
-        image: ${{ github.event.repository.name }}
-        tags: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        registry: quay.io/kingpinx1
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+        push: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-contexts: |
+          ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        build-args: |
+          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          PHPVERSION=${{ matrix.php-version }}
+          BASEOS=${{ matrix.php-base-os }}
+        tags: |
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#    - 
+#      name: Push To Registry
+#      uses: redhat-actions/push-to-registry@v2
+#      with:
+#        image: ${{ github.event.repository.name }}
+#        tags: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+#        registry: quay.io/kingpinx1
