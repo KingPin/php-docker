@@ -77,9 +77,10 @@ jobs:
 #          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 #          BASEOS=${{ matrix.php-base-os }}
       with:
+        context: .
         load: true
 #        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        tags: ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
@@ -90,20 +91,20 @@ jobs:
       name: Test php
       if: matrix.php-type != 'apache'
       run: |
-        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
     -
       name: Test apache
       if: matrix.php-type == 'apache'
       run: |
-        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-        docker run --rm ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+        docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
     - 
       name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: image
-        image-ref: ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         format: 'sarif'
         severity: 'CRITICAL,HIGH'
         hide-progress: false
@@ -120,12 +121,13 @@ jobs:
 #          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
 #          BASEOS=${{ matrix.php-base-os }}
       with:
+        context: .
         platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-contexts: |
-          ${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         build-args: |
           VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
           PHPVERSION=${{ matrix.php-version }}
@@ -134,10 +136,4 @@ jobs:
           docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
           ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
           quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#    - 
-#      name: Push To Registry
-#      uses: redhat-actions/push-to-registry@v2
-#      with:
-#        image: ${{ github.event.repository.name }}
-#        tags: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#        registry: quay.io/kingpinx1
+
