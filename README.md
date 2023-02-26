@@ -1,9 +1,10 @@
 
-
 # php-docker
-php in docker for arm64 &amp; amd64
+php in docker for arm64 &amp; amd64 &amp; Arm32/v7
 
-Following tags exist in both amd64 && arm64/aarch64:
+How to [set this image up via docker](https://sumguy.com/install-wordpress-with-php-fpm-caddy-via-docker/)
+
+Following tags exist in both amd64 && arm64/aarch64 && armv7/armhf:
 
  - 7-cli-bullseye
  - 7-cli-alpine 
@@ -34,7 +35,7 @@ Contains the following php extensions :
  - calendar
  - ctype  
  - exif  
- - gd  
+ - gd (no av1 encoder)
  - intl 
  - imagick
  - imap
@@ -65,3 +66,4 @@ Contains the following php extensions :
  Also contains latest **composer**
  
  For the apache version only it also contains **rewrite** mod
+
