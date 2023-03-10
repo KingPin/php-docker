@@ -35,7 +35,7 @@ Contains the following php extensions :
  - calendar
  - ctype  
  - exif  
- - gd (no av1 encoder)
+ - gd (no av1 encoder on arm7 only)
  - intl 
  - imagick
  - imap

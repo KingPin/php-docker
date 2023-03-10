@@ -24,8 +24,7 @@ RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
         chmod +x /usr/local/bin/install-php-extensions && \
         install-php-extensions amqp bcmath bz2 calendar ctype exif intl imagick imap json mbstring ldap memcached mongodb mysqli \
-          opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer && \
-        IPE_GD_WITHOUTAVIF=1 install-php-extensions gd;
+          opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer
 
 # enable apache rewrite mod
 RUN if command -v a2enmod; then a2enmod rewrite; fi
@@ -41,3 +40,17 @@ RUN case "$PHPVERSION" in \
             ;; \
     esac
 
+# disable av1 only in arm7
+RUN case $(uname -m) in \
+        x86_64|aarch64) \
+            install-php-extensions gd; \
+            echo arch: $(uname -m) \
+            ;; \
+        armv7l) \
+            IPE_GD_WITHOUTAVIF=1 install-php-extensions gd; \
+            echo arch: $(uname -m) \
+            ;; \
+        *) \
+            echo o.0 arch: $(uname -m) \
+            ;; \
+    esac
