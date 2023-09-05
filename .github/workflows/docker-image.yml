@@ -35,7 +35,7 @@ jobs:
       run: env | sort
     -
       name: Checkout source
-      uses: actions/checkout@v3.3.0
+      uses: actions/checkout@v4
       with:
         # Repository name with owner. For example, actions/checkout
         repository: ${{ github.repository }}
