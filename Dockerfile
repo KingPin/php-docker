@@ -39,10 +39,12 @@ RUN case "$PHPVERSION" in \
         8.2) \
             install-php-extensions imagick \
             echo installing imagick for php = 8.2; \
+            echo no mcrypt for php > 8.1; \
             echo PHP version: $PHPVERSION \
             ;; \
         *) \
-            echo no mcrypt or imagick for php > 8.1; \
+            echo no mcrypt for php > 8.1; \
+            echo no imagick for php > 8.2; \
             echo PHP version: $PHPVERSION \
             ;; \
     esac
