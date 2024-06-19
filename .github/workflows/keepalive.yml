@@ -11,7 +11,7 @@ jobs:
         - name: Keepalive Workflow
           # You may pin to the exact commit or the version.
           # uses: gautamkrishnar/keepalive-workflow@c85efc9567a3dadb9b9d4e116aa891f76c0ef7e6
-          uses: gautamkrishnar/keepalive-workflow@v1
+          uses: gautamkrishnar/keepalive-workflow@v2
           with:
             # GitHub access token with Repo scope
             gh_token: ${{ github.token }}
