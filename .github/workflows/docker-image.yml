@@ -23,7 +23,7 @@ jobs:
           # - '8.0'
           - '7'
         php-base-os: 
-          - bullseye
+          - bookworm
           - alpine
         exclude:
           - php-type: apache
@@ -38,7 +38,6 @@ jobs:
       name: Checkout source
       uses: actions/checkout@v4
       with:
-        # Repository name with owner. For example, actions/checkout
         repository: ${{ github.repository }}
         token: ${{ github.token }}
     -
@@ -74,13 +73,9 @@ jobs:
     -
       name: Build and test docker image
       uses: docker/build-push-action@v6
-#      env: |
-#          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#          BASEOS=${{ matrix.php-base-os }}
       with:
         context: .
         load: true
-#        tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -118,9 +113,6 @@ jobs:
     - 
       name: Build and push Docker image
       uses: docker/build-push-action@v6
-#      env: |
-#          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-#          BASEOS=${{ matrix.php-base-os }}
       with:
         context: .
         platforms: linux/amd64,linux/arm64,linux/arm/v7
