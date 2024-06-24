@@ -11,11 +11,11 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
         echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/bullseye-backports.list && \
         apt-get update && \
         apt-get -y upgrade && \
-        apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick && \
+        apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
-        apk add --no-cache curl git zip unzip ghostscript imagemagick; \
+        apk add --no-cache curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim; \
     fi
 
 # Add all needed PHP extensions
