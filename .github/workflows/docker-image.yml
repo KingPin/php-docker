@@ -26,7 +26,6 @@ jobs:
             php-base-os: bullseye
           - php-version: '8.1'
             php-base-os: bullseye
-#    if: "!contains(github.event.head_commit.message, '[skip nix]')"
 
     steps:
     - name: Checkout source
@@ -92,10 +91,10 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        build-contexts: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        cache-from: type=gha,scope=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        # build-contexts: |
+          # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
         build-args: |
           VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
           PHPVERSION=${{ matrix.php-version }}
