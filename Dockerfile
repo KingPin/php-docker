@@ -21,7 +21,7 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
-        apk add --no-cache curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo pngquant libwebp-tools; \
+        apk add --no-cache curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools; \
     fi
 
 # Add all needed PHP extensions
