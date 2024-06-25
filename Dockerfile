@@ -1,7 +1,7 @@
 ARG VERSION
+FROM php:${VERSION}
 ARG PHPVERSION
 ARG BASEOS
-FROM php:${VERSION}
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
