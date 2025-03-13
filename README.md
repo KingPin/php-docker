@@ -7,7 +7,7 @@ How to [set this image up via docker](https://sumguy.com/install-wordpress-with-
 Following tags exist in both amd64 && arm64/aarch64 && armv7/armhf:
 
 ( lines with ~~strikethrough~~ are now deprectaed, they are available but wont be built via CI anymore. if you need those updated, open an issue. )
-php-7 is still on bookworm.
+php-7 is still on bullseye.
 php8.1 and higher have now migrated to bookworm. so if you use php8.3-fpm-bullseye OR php8.3-fpm-bullseye they both are the same image built on bookworm. this was done to not break containers for anyone still using bullseye as the tag.
 
  - 7-cli-bullseye
