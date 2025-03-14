@@ -22,9 +22,9 @@ jobs:
       - name: Generate build matrix
         id: set-matrix
         run: |
-          # Generate dynamic matrix with all combinations
-          matrix=$(cat << EOF
-          {
+          # Using the heredoc delimiter syntax for multiline GitHub Actions outputs
+          echo "matrix<<EOF" >> $GITHUB_OUTPUT
+          echo '{
             "php-version": ["7.4", "8.0", "8.1", "8.2", "8.3"],
             "php-type": ["cli", "fpm", "apache"],
             "php-base-os": ["bullseye", "bookworm", "alpine"],
@@ -33,10 +33,8 @@ jobs:
               {"php-version": "8.0", "php-base-os": "bookworm"},
               {"php-version": "8.3", "php-type": "apache", "php-base-os": "alpine"}
             ]
-          }
-          EOF
-          )
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          }' >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
           
   build-test:
     needs: matrix-prep
