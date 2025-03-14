@@ -299,7 +299,7 @@ jobs:
 
       - name: Upload build metrics
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # Update from v3 to v4
         with:
           name: build-metrics
           path: build-metrics.csv
