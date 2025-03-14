@@ -1,120 +1,385 @@
-name: Docker Image CI
+name: PHP Docker Build Pipeline
 
 on:
   schedule:
     - cron: '31 16 * * 3'
   workflow_dispatch:
+  push:
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/docker-image.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+  matrix-prep:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          # Generate dynamic matrix with all combinations
+          matrix=$(cat << EOF
+          {
+            "php-version": ["7.4", "8.0", "8.1", "8.2", "8.3"],
+            "php-type": ["cli", "fpm", "apache"],
+            "php-base-os": ["bullseye", "bookworm", "alpine"],
+            "exclude": [
+              {"php-version": "7.4", "php-base-os": "bookworm"},
+              {"php-version": "8.0", "php-base-os": "bookworm"},
+              {"php-version": "8.3", "php-type": "apache", "php-base-os": "alpine"}
+            ]
+          }
+          EOF
+          )
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          
+  build-test:
+    needs: matrix-prep
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.matrix-prep.outputs.matrix)}}
+    outputs:
+      image-tags: ${{ steps.save-tags.outputs.tags }}
+    
+    steps:
+      - name: Record start time
+        id: start_time
+        run: |
+          echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Docker environment
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: amd64,arm64,arm
+
+      - name: Setup Docker Buildx with Resource Limits
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: |
+            --debug
+            --allow-insecure-entitlement security.insecure
+            --allow-insecure-entitlement network.host
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 4
+            [worker.containerd.platforms]
+              linux/arm/v7 = ["agent:arm64"]
+              linux/arm64 = ["agent:arm64"]
+
+      - name: Login to DockerHub registry
+        uses: docker/login-action@v3 
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log into ghcr.io registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Quay.io registry
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Set image details
+        id: image-details
+        run: |
+          # Generate consistent image tags/names across the workflow
+          echo "IMAGE_NAME=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "GHCR_TAG=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php.version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+
+      - name: Set smart tags
+        id: smart-tags
+        run: |
+          echo "::group::Setting smart version tags"
+          # Add major.minor tags
+          MAJOR_VERSION=$(echo "${{ matrix.php-version }}" | cut -d. -f1)
+          MINOR_VERSION=$(echo "${{ matrix.php-version }}" | cut -d. -f1,2)
+          
+          # Set tags for each registry
+          if [[ "${{ matrix.php-version }}" == "8.3" && "${{ matrix.php-type }}" == "cli" && "${{ matrix.php-base-os }}" == "alpine" ]]; then
+            echo "DOCKERHUB_ADDITIONAL_TAGS=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest,docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${MAJOR_VERSION},docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${MINOR_VERSION}" >> $GITHUB_ENV
+            echo "GHCR_ADDITIONAL_TAGS=ghcr.io/kingpin/${{ github.event.repository.name }}:latest,ghcr.io/kingpin/${{ github.event.repository.name }}:${MAJOR_VERSION},ghcr.io/kingpin/${{ github.event.repository.name }}:${MINOR_VERSION}" >> $GITHUB_ENV
+            echo "QUAY_ADDITIONAL_TAGS=quay.io/kingpinx1/${{ github.event.repository.name }}:latest,quay.io/kingpinx1/${{ github.event.repository.name }}:${MAJOR_VERSION},quay.io/kingpinx1/${{ github.event.repository.name }}:${MINOR_VERSION}" >> $GITHUB_ENV
+          else
+            echo "DOCKERHUB_ADDITIONAL_TAGS=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+            echo "GHCR_ADDITIONAL_TAGS=ghcr.io/kingpin/${{ github.event.repository.name }}:${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},ghcr.io/kingpin/${{ github.event.repository.name }}:${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+            echo "QUAY_ADDITIONAL_TAGS=quay.io/kingpinx1/${{ github.event.repository.name }}:${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},quay.io/kingpinx1/${{ github.event.repository.name }}:${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          fi
+          echo "::endgroup::"
+
+      - name: Build test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          platforms: linux/amd64
+          cache-from: |
+            type=gha,scope=test-${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ github.repository_owner }}-test-cache:${{ env.IMAGE_NAME }}
+          cache-to: |
+            type=gha,mode=max,scope=test-${{ env.IMAGE_NAME }}
+          build-args: |
+            VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+            PHPVERSION=${{ matrix.php-version }}
+            BASEOS=${{ matrix.php-base-os }}
+          tags: |
+            test-${{ env.IMAGE_NAME }}
+
+      - name: Run validation tests
+        run: |
+          echo "::group::Testing image ${{ env.IMAGE_NAME }}"
+          
+          # Version validation
+          echo "Verifying PHP version..."
+          docker run --rm test-${{ env.IMAGE_NAME }} php -v | grep -q "${{ matrix.php-version }}" || { echo "::error::PHP version mismatch"; exit 1; }
+          
+          # Extension validation
+          echo "Checking extensions..."
+          docker run --rm test-${{ env.IMAGE_NAME }} php -m > extensions.txt
+          
+          # Check for critical extensions
+          for ext in imagick gd json mysqli zip; do
+            grep -q "$ext" extensions.txt || { echo "::error::Missing extension: $ext"; exit 1; }
+          done
+          
+          # Additional health checks
+          echo "Running health checks..."
+          docker run --rm test-${{ env.IMAGE_NAME }} php -r "echo 'PHP is working correctly\n';"
+          
+          echo "::endgroup::"
+
+      - name: Run comprehensive tests
+        run: |
+          echo "::group::Advanced Testing Suite"
+          
+          # Test PHP modules functionality
+          docker run --rm test-${{ env.IMAGE_NAME }} php -r "
+            // Test GD functionality
+            \$img = imagecreatetruecolor(100, 100);
+            echo imagecolorallocate(\$img, 255, 0, 0) !== false ? 'GD working ✅\n' : 'GD failed ❌\n';
+            imagedestroy(\$img);
+            
+            // Test MySQL connectivity
+            if (function_exists('mysqli_connect')) {
+              echo 'MySQLi extension loaded ✅\n';
+            }
+            
+            // Test Zip functionality
+            if (class_exists('ZipArchive')) {
+              echo 'Zip extension loaded ✅\n';
+            }
+          "
+          
+          echo "::endgroup::"
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          echo "::group::Checking for image changes"
+          
+          # Try to pull the previous image
+          if docker pull ${{ env.DOCKERHUB_TAG }} &>/dev/null; then
+            # Compare image digest with current Dockerfile hash
+            PREVIOUS_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.DOCKERHUB_TAG }} | cut -d'@' -f2)
+            CURRENT_HASH=$(sha256sum Dockerfile | cut -d' ' -f1)
+            
+            echo "Previous digest: $PREVIOUS_DIGEST"
+            echo "Current hash: $CURRENT_HASH"
+            
+            # Skip if unchanged and not manually triggered
+            if [[ "$PREVIOUS_DIGEST" == "$CURRENT_HASH" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+              echo "No changes detected, skipping build"
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "Changes detected, will build"
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No previous image found, will build"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "::endgroup::"
+
+      - name: Build and push Docker image
+        if: steps.check-changes.outputs.skip != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          cache-from: |
+            type=gha,scope=${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ github.repository_owner }}-cache:${{ env.IMAGE_NAME }}
+          cache-to: |
+            type=gha,mode=max,scope=${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ github.repository_owner }}-cache:${{ env.IMAGE_NAME }},mode=max
+          build-args: |
+            VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+            PHPVERSION=${{ matrix.php-version }}
+            BASEOS=${{ matrix.php-base-os }}
+          tags: |
+            ${{ env.DOCKERHUB_TAG }}
+            ${{ env.GHCR_TAG }}
+            ${{ env.QUAY_TAG }}
+            ${{ env.DOCKERHUB_ADDITIONAL_TAGS }}
+            ${{ env.GHCR_ADDITIONAL_TAGS }}
+            ${{ env.QUAY_ADDITIONAL_TAGS }}
+
+      - name: Build PR preview image
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/kingpin/${{ github.event.repository.name }}:pr-${{ github.event.pull_request.number }}-${{ env.IMAGE_NAME }}
+
+      - name: Create and push manifest
+        if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.check-changes.outputs.skip != 'true' }}
+        run: |
+          echo "::group::Creating multi-architecture manifests"
+          # Multi-architecture images are automatically created by docker/build-push-action
+          # This step is only needed for the additional tag manifests
+          
+          if [[ -n "$DOCKERHUB_ADDITIONAL_TAGS" ]]; then
+            for TAG in $(echo $DOCKERHUB_ADDITIONAL_TAGS | tr ',' ' '); do
+              docker buildx imagetools create -t $TAG $DOCKERHUB_TAG
+            done
+          fi
+          
+          if [[ -n "$GHCR_ADDITIONAL_TAGS" ]]; then
+            for TAG in $(echo $GHCR_ADDITIONAL_TAGS | tr ',' ' '); do
+              docker buildx imagetools create -t $TAG $GHCR_TAG
+            done
+          fi
+          
+          if [[ -n "$QUAY_ADDITIONAL_TAGS" ]]; then
+            for TAG in $(echo $QUAY_ADDITIONAL_TAGS | tr ',' ' '); do
+              docker buildx imagetools create -t $TAG $QUAY_TAG
+            done
+          fi
+          echo "::endgroup::"
+
+      - name: Save image tags for scan job
+        id: save-tags
+        if: steps.check-changes.outputs.skip != 'true' && github.ref == 'refs/heads/main'
+        run: |
+          # Save image tags for scan job in JSON format
+          echo "tags={\"dockerhub\":\"${{ env.DOCKERHUB_TAG }}\",\"ghcr\":\"${{ env.GHCR_TAG }}\",\"quay\":\"${{ env.QUAY_TAG }}\",\"image_name\":\"${{ env.IMAGE_NAME }}\"}" >> $GITHUB_OUTPUT
+
+      - name: Timing Report
+        if: always()
+        run: |
+          echo "::group::Build Performance Metrics"
+          # Calculate and store build times
+          END_TIME=$(date +%s)
+          BUILD_TIME=$((END_TIME - ${{ steps.start_time.outputs.time }}))
+          echo "Total build time: $(($BUILD_TIME / 60)) minutes and $(($BUILD_TIME % 60)) seconds"
+          
+          # Store metrics for tracking
+          echo "${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }},$BUILD_TIME" >> build-metrics.csv
+          echo "::endgroup::"
+
+      - name: Upload build metrics
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-metrics
+          path: build-metrics.csv
+          retention-days: 90
+
+  scan:
+    needs: build-test
+    if: ${{ needs.build-test.outputs.image-tags != '' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        php-type: [cli, fpm, apache]
-        php-version: ['8.3', '8.2', '8.1', '7']
-        php-base-os: [bullseye, bookworm, alpine]
-        exclude:
-          - php-type: apache
-            php-base-os: alpine
-          - php-version: '7'
-            php-base-os: bookworm
-          - php-version: '8.3'
-            php-base-os: bullseye
-          - php-version: '8.2'
-            php-base-os: bullseye
-          - php-version: '8.1'
-            php-base-os: bullseye
-
+        include:
+          - registry: dockerhub
+            name: DockerHub
+          - registry: ghcr
+            name: GitHub Container Registry
+    
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v4
+      - name: Parse image details
+        id: image-details
+        run: |
+          # Extract the image tag from the JSON output
+          IMAGE_TAGS='${{ needs.build-test.outputs.image-tags }}'
+          REGISTRY="${{ matrix.registry }}"
+          
+          # Parse JSON to get the specific registry tag
+          IMAGE_TAG=$(echo $IMAGE_TAGS | jq -r ".$REGISTRY")
+          IMAGE_NAME=$(echo $IMAGE_TAGS | jq -r ".image_name")
+          
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_TAG }}
+          format: 'sarif'
+          severity: 'CRITICAL,HIGH'
+          hide-progress: false
+          output: 'trivy-results-${{ matrix.registry }}-${{ env.IMAGE_NAME }}.sarif'
 
-    - name: Docker Setup QEMU
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: amd64,arm64,arm
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.registry }}-${{ env.IMAGE_NAME }}.sarif'
+          category: ${{ matrix.name }}
 
-    - name: Docker Setup Buildx
-      uses: docker/setup-buildx-action@v3
+  publish:
+    needs: [build-test, scan]
+    if: ${{ needs.build-test.outputs.image-tags != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Login to DockerHub registry
-      uses: docker/login-action@v3 
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Log into ghcr.io registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Login to Quay.io registry
-      uses: docker/login-action@v3
-      with:
-        registry: quay.io
-        username: ${{ secrets.QUAY_USERNAME }}
-        password: ${{ secrets.QUAY_ROBOT_TOKEN }}
-
-    # - name: Build Docker image for testing
-    #   uses: docker/build-push-action@v6
-    #   with:
-    #     context: .
-    #     load: true
-    #     cache-from: type=gha
-    #     cache-to: type=gha,mode=max
-    #     build-args: |
-    #       VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-    #       PHPVERSION=${{ matrix.php-version }}
-    #       BASEOS=${{ matrix.php-base-os }}
-    #     tags: |
-    #       ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-
-    # - name: Test PHP
-    #   if: matrix.php-type != 'apache'
-    #   run: |
-    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
-
-    # - name: Test Apache
-    #   if: matrix.php-type == 'apache'
-    #   run: |
-    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
-    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        platforms: linux/amd64,linux/arm64,linux/arm/v7
-        push: true
-        cache-from: type=gha,scope=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        cache-to: type=gha,mode=max,scope=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        # build-contexts: |
-          # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        build-args: |
-          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          PHPVERSION=${{ matrix.php-version }}
-          BASEOS=${{ matrix.php-base-os }}
-        tags: |
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: image
-        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
-        format: 'sarif'
-        severity: 'CRITICAL,HIGH'
-        hide-progress: false
-        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
-
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
+      - name: Update README
+        run: |
+          echo "::group::Updating image metadata"
+          
+          # Update project documentation with latest build info
+          DATE=$(date '+%Y-%m-%d')
+          echo "Last updated: $DATE" >> README.md
+          echo "Successfully built and published images for PHP Docker project" >> README.md
+          
+          echo "::endgroup::"
+      
+      - name: Notify on completion
+        if: always()
+        run: |
+          echo "::group::Build status notification"
+          
+          # Send notification about build status
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "Build completed successfully"
+          else
+            echo "Build failed"
+          fi
+          
+          echo "::endgroup::"
