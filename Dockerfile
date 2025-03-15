@@ -11,16 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install dependencies based on the base OS with BuildKit cache mounts
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    if [ "$BASEOS" = "bullseye" ]; then \
-        echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/bullseye-backports.list && \
-        apt-get update && \
-        apt-get -y upgrade && \
-        apt-get install -y --no-install-recommends \
-            curl git zip unzip ghostscript imagemagick \
-            optipng gifsicle pngcrush jpegoptim \
-            libjpeg-turbo-progs pngquant webp && \
-        rm -rf /var/lib/apt/lists/*; \
-    elif [ "$BASEOS" = "bookworm" ]; then \
+    if [ "$BASEOS" = "bookworm" ]; then \
         echo 'deb http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list && \
         apt-get update && \
         apt-get -y upgrade && \
@@ -94,32 +85,7 @@ ARG BASEOS
 COPY --from=builder /usr/local/ /usr/local/
 
 # Install required system libraries based on OS
-RUN if [ "$BASEOS" = "bullseye" ]; then \
-        apt-get update && \
-        apt-get install -y --no-install-recommends \
-            librabbitmq4 \
-            libpng16-16 \
-            libmagickwand-6.q16-6 \
-            libc-client2007e \
-            libsnappy1v5 \
-            libpq5 \
-            libsnmp40 \
-            libtidy5deb1 \
-            libvips42 \
-            libxslt1.1 \
-            libyaml-0-2 \
-            libzip4 \
-            libmemcached11 \
-            ghostscript \
-            imagemagick \
-            libwebp6 \
-            libavif9 \
-            libicu67 \
-            libldap-2.4-2 \
-            libuuid1 \
-            libxpm4 && \
-        rm -rf /var/lib/apt/lists/*; \
-    elif [ "$BASEOS" = "bookworm" ]; then \
+RUN if [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             librabbitmq4 \
