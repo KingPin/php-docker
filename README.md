@@ -8,9 +8,9 @@ Multi-architecture PHP Docker images with extensive extensions for modern web de
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 7.4, 8.1, 8.2, and 8.3
+- **Multiple PHP Versions**: PHP 8.1, 8.2, and 8.3
 - **Multiple Server Types**: CLI, FPM, and Apache
-- **Base OS Options**: Alpine (lightweight) and Debian (Bullseye/Bookworm)
+- **Base OS Options**: Alpine (lightweight) and Debian (Bookworm)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
 - **Latest Composer**: Always ships with the latest Composer version
 - **Image Processing Tools**: Includes ImageMagick, GD, and various image optimization utilities
@@ -44,11 +44,6 @@ These images are available on multiple registries for redundancy and flexibility
 
 | PHP Version | Type   | OS        | Tag Example                |
 |-------------|--------|-----------|----------------------------|
-| 7.4         | CLI    | Bullseye  | `7-cli-bullseye`           |
-| 7.4         | CLI    | Alpine    | `7-cli-alpine`             |
-| 7.4         | FPM    | Bullseye  | `7-fpm-bullseye`           |
-| 7.4         | FPM    | Alpine    | `7-fpm-alpine`             |
-| 7.4         | Apache | Bullseye  | `7-apache-bullseye`        |
 | 8.1         | CLI    | Bookworm  | `8.1-cli-bookworm`         |
 | 8.1         | CLI    | Alpine    | `8.1-cli-alpine`           |
 | 8.1         | FPM    | Bookworm  | `8.1-fpm-bookworm`         |
@@ -71,11 +66,18 @@ These images are available on multiple registries for redundancy and flexibility
 
 The following tags are available but no longer built via CI:
 
+- 7-cli-bullseye
+- 7-cli-alpine
+- 7-apache-bullseye
+- 7-fpm-bullseye
+- 7-fpm-alpine
 - 8.0-cli-bullseye
 - 8.0-cli-alpine
 - 8.0-apache-bullseye
 - 8.0-fpm-bullseye
 - 8.0-fpm-alpine
+
+> **Important:** PHP 7.x has been deprecated and is no longer supported. Please upgrade to PHP 8.1 or newer for security and performance improvements.
 
 ## 📊 Image Sizes
 

@@ -25,11 +25,10 @@ jobs:
           # Using the heredoc delimiter syntax for multiline GitHub Actions outputs
           echo "matrix<<EOF" >> $GITHUB_OUTPUT
           echo '{
-            "php-version": ["7", "8.1", "8.2", "8.3"],
+            "php-version": ["8.1", "8.2", "8.3"],
             "php-type": ["cli", "fpm", "apache"],
             "php-base-os": ["bullseye", "bookworm", "alpine"],
             "exclude": [
-              {"php-version": "7", "php-base-os": "bookworm"},
               {"php-version": "8.1", "php-base-os": "bullseye"},
               {"php-version": "8.2", "php-base-os": "bullseye"},
               {"php-version": "8.3", "php-base-os": "bullseye"},
@@ -106,7 +105,7 @@ jobs:
           echo "IMAGE_NAME=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "GHCR_TAG=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
-          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php.version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
 
       - name: Set smart tags
         id: smart-tags

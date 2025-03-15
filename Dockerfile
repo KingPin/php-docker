@@ -63,7 +63,7 @@ RUN if command -v a2enmod; then \
 
 # Add mcrypt and imagick based on PHP version
 RUN case "$PHPVERSION" in \
-        7|8.0|8.1|8.2) \
+        8.0|8.1|8.2) \
             install-php-extensions imagick; \
             ;; \
         8.3) \
