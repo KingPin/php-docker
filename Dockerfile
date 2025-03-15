@@ -1,4 +1,6 @@
 ARG VERSION
+
+# First stage: builder
 FROM public.ecr.aws/docker/library/php:${VERSION} AS builder
 ARG PHPVERSION
 ARG BASEOS
@@ -84,7 +86,7 @@ RUN case $(uname -m) in \
             ;; \
     esac
 
-# Create a production stage to reduce image size
+# Second stage: production
 FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG BASEOS
 
@@ -92,7 +94,7 @@ ARG BASEOS
 COPY --from=builder /usr/local/ /usr/local/
 
 # Install required system libraries based on OS
-RUN if [ "$BASEOS" = "bullseye" ] || [ "$BASEOS" = "bookworm" ]; then \
+RUN if [ "$BASEOS" = "bullseye" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             librabbitmq4 \
@@ -111,6 +113,26 @@ RUN if [ "$BASEOS" = "bullseye" ] || [ "$BASEOS" = "bookworm" ]; then \
             ghostscript \
             imagemagick \
             libwebp6 && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$BASEOS" = "bookworm" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            librabbitmq4 \
+            libpng16-16 \
+            libmagickwand-6.q16-6 \
+            libc-client2007e \
+            libsnappy1v5 \
+            libpq5 \
+            libsnmp40 \
+            libtidy5deb1 \
+            libvips42 \
+            libxslt1.1 \
+            libyaml-0-2 \
+            libzip4 \
+            libmemcached11 \
+            ghostscript \
+            imagemagick \
+            libwebp7 && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk add --no-cache \
