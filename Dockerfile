@@ -103,20 +103,21 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             libc-client2007e \
             libsnappy1v5 \
             libpq5 \
-            libnetsnmp40 \
+            libsnmp40 \
             libtidy5deb1 \
             libvips42 \
-            libexslt0 \
+            libxslt1.1 \
             libyaml-0-2 \
             libzip4 \
             libmemcached11 \
             ghostscript \
             imagemagick \
             libwebp6 \
-            libavif13 \
+            libavif \
             libicu67 \
             libldap-2.4-2 \
-            libuuid1 && \
+            libuuid1 \
+            libxpm4 && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
@@ -140,7 +141,8 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             libavif15 \
             libicu72 \
             libldap-2.5-0 \
-            libuuid1 && \
+            libuuid1 \
+            libxpm4 && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk add --no-cache \
@@ -161,8 +163,9 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             libwebp \
             libavif \
             icu-libs \
-            openldap-libs \
-            libuuid; \
+            openldap \
+            libuuid \
+            libxpm; \
     fi
 
 # Set useful PHP environment variables
