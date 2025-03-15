@@ -112,7 +112,11 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             libmemcached11 \
             ghostscript \
             imagemagick \
-            libwebp6 && \
+            libwebp6 \
+            libavif13 \
+            libicu67 \
+            libldap-2.4-2 \
+            libuuid1 && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
@@ -132,7 +136,11 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             libmemcached11 \
             ghostscript \
             imagemagick \
-            libwebp7 && \
+            libwebp7 \
+            libavif15 \
+            libicu72 \
+            libldap-2.5-0 \
+            libuuid1 && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk add --no-cache \
@@ -150,7 +158,11 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             libzip \
             libmemcached \
             ghostscript \
-            libwebp; \
+            libwebp \
+            libavif \
+            icu-libs \
+            openldap-libs \
+            libuuid; \
     fi
 
 # Set useful PHP environment variables
