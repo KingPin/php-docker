@@ -301,9 +301,9 @@ jobs:
 
       - name: Upload build metrics
         if: always()
-        uses: actions/upload-artifact@v4  # Update from v3 to v4
+        uses: actions/upload-artifact@v4
         with:
-          name: build-metrics
+          name: build-metrics-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}-${{ github.run_id }}
           path: build-metrics.csv
           retention-days: 90
 
@@ -383,3 +383,22 @@ jobs:
           fi
           
           echo "::endgroup::"
+
+  combine-metrics:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-metrics-*
+          merge-multiple: true
+          path: all-metrics
+        
+      - name: Combine metrics files
+        run: |
+          cat all-metrics/*.csv > combined-metrics.csv
+        
+      - uses: actions/upload-artifact@v4
+        with:
+          name: combined-build-metrics
+          path: combined-metrics.csv
