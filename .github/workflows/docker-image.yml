@@ -128,6 +128,10 @@ jobs:
           fi
           echo "::endgroup::"
 
+      - name: Set lowercase owner name
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
       - name: Build test image
         uses: docker/build-push-action@v6
         with:
@@ -136,7 +140,7 @@ jobs:
           platforms: linux/amd64
           cache-from: |
             type=gha,scope=test-${{ env.IMAGE_NAME }}
-            type=registry,ref=ttl.sh/${{ github.repository_owner | lower }}-test-cache:${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ env.OWNER_LC }}-test-cache:${{ env.IMAGE_NAME }}
           cache-to: |
             type=gha,mode=max,scope=test-${{ env.IMAGE_NAME }}
           build-args: |
@@ -231,10 +235,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
           cache-from: |
             type=gha,scope=${{ env.IMAGE_NAME }}
-            type=registry,ref=ttl.sh/${{ github.repository_owner | lower }}-cache:${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ env.OWNER_LC }}-cache:${{ env.IMAGE_NAME }}
           cache-to: |
             type=gha,mode=max,scope=${{ env.IMAGE_NAME }}
-            type=registry,ref=ttl.sh/${{ github.repository_owner | lower }}-cache:${{ env.IMAGE_NAME }},mode=max
+            type=registry,ref=ttl.sh/${{ env.OWNER_LC }}-cache:${{ env.IMAGE_NAME }},mode=max
           build-args: |
             VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
             PHPVERSION=${{ matrix.php-version }}
