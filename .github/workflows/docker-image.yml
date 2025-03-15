@@ -25,13 +25,15 @@ jobs:
           # Using the heredoc delimiter syntax for multiline GitHub Actions outputs
           echo "matrix<<EOF" >> $GITHUB_OUTPUT
           echo '{
-            "php-version": ["7.4", "8.0", "8.1", "8.2", "8.3"],
+            "php-version": ["7", "8.1", "8.2", "8.3"],
             "php-type": ["cli", "fpm", "apache"],
             "php-base-os": ["bullseye", "bookworm", "alpine"],
             "exclude": [
-              {"php-version": "7.4", "php-base-os": "bookworm"},
-              {"php-version": "8.0", "php-base-os": "bookworm"},
-              {"php-version": "8.3", "php-type": "apache", "php-base-os": "alpine"}
+              {"php-version": "7", "php-base-os": "bookworm"},
+              {"php-version": "8.1", "php-base-os": "bullseye"},
+              {"php-version": "8.2", "php-base-os": "bullseye"},
+              {"php-version": "8.3", "php-base-os": "bullseye"},
+              {"php-type": "apache", "php-base-os": "alpine"}
             ]
           }' >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
