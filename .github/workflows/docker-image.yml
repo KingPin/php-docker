@@ -66,17 +66,6 @@ jobs:
             --debug
             --allow-insecure-entitlement security.insecure
             --allow-insecure-entitlement network.host
-          # buildkitd-config-inline: |
-          #   [worker.oci]
-          #     max-parallelism = 4
-
-          #   [worker.containerd]
-          #     platforms = ["linux/amd64", "linux/arm64", "linux/arm/v7"]
-
-          #   [worker.oci.gcpolicy]
-          #     keepBytes = "10000000000"
-          #     keepDuration = "604800"
-
           buildkitd-config-inline: |
             [worker.oci]
               max-parallelism = 4
@@ -84,9 +73,9 @@ jobs:
             [worker.containerd]
               platforms = ["linux/amd64", "linux/arm64", "linux/arm/v7"]
 
-            [worker.oci.gcpolicy]
-              keepBytes = 10000000000
-              keepDuration = 604800
+          #   [worker.oci.gcpolicy]
+          #     keepBytes = 10000000000
+          #     keepDuration = 604800
 
       - name: Login to DockerHub registry
         uses: docker/login-action@v3 
