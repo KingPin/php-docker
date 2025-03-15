@@ -106,7 +106,7 @@ jobs:
           echo "IMAGE_NAME=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "GHCR_TAG=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
-          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php.version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
 
       - name: Set smart tags
         id: smart-tags
@@ -136,7 +136,7 @@ jobs:
           platforms: linux/amd64
           cache-from: |
             type=gha,scope=test-${{ env.IMAGE_NAME }}
-            type=registry,ref=ttl.sh/${{ github.repository_owner }}-test-cache:${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ github.repository_owner | lower }}-test-cache:${{ env.IMAGE_NAME }}
           cache-to: |
             type=gha,mode=max,scope=test-${{ env.IMAGE_NAME }}
           build-args: |
@@ -231,10 +231,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
           cache-from: |
             type=gha,scope=${{ env.IMAGE_NAME }}
-            type=registry,ref=ttl.sh/${{ github.repository_owner }}-cache:${{ env.IMAGE_NAME }}
+            type=registry,ref=ttl.sh/${{ github.repository_owner | lower }}-cache:${{ env.IMAGE_NAME }}
           cache-to: |
             type=gha,mode=max,scope=${{ env.IMAGE_NAME }}
-            type=registry,ref=ttl.sh/${{ github.repository_owner }}-cache:${{ env.IMAGE_NAME }},mode=max
+            type=registry,ref=ttl.sh/${{ github.repository_owner | lower }}-cache:${{ env.IMAGE_NAME }},mode=max
           build-args: |
             VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
             PHPVERSION=${{ matrix.php-version }}
