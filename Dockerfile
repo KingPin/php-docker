@@ -113,7 +113,7 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
             ghostscript \
             imagemagick \
             libwebp6 \
-            libavif \
+            libavif9 \
             libicu67 \
             libldap-2.4-2 \
             libuuid1 \
