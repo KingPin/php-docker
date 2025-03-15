@@ -91,6 +91,46 @@ ARG BASEOS
 # Copy installed extensions and configurations from builder
 COPY --from=builder /usr/local/ /usr/local/
 
+# Install required system libraries based on OS
+RUN if [ "$BASEOS" = "bullseye" ] || [ "$BASEOS" = "bookworm" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            librabbitmq4 \
+            libpng16-16 \
+            libmagickwand-6.q16-6 \
+            libc-client2007e \
+            libsnappy1v5 \
+            libpq5 \
+            libnetsnmp40 \
+            libtidy5deb1 \
+            libvips42 \
+            libexslt0 \
+            libyaml-0-2 \
+            libzip4 \
+            libmemcached11 \
+            ghostscript \
+            imagemagick \
+            libwebp6 && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$BASEOS" = "alpine" ]; then \
+        apk add --no-cache \
+            rabbitmq-c \
+            libpng \
+            imagemagick \
+            c-client \
+            libsnappy \
+            libpq \
+            net-snmp-libs \
+            tidyhtml-libs \
+            vips \
+            libxslt \
+            yaml \
+            libzip \
+            libmemcached \
+            ghostscript \
+            libwebp; \
+    fi
+
 # Set useful PHP environment variables
 ENV PHP_MEMORY_LIMIT=256M \
     PHP_UPLOAD_MAX_FILESIZE=64M \
