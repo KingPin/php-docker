@@ -1,5 +1,5 @@
 ARG VERSION
-FROM php:${VERSION} AS builder
+FROM public.ecr.aws/docker/library/php:${VERSION} AS builder
 ARG PHPVERSION
 ARG BASEOS
 
@@ -85,7 +85,7 @@ RUN case $(uname -m) in \
     esac
 
 # Create a production stage to reduce image size
-FROM php:${VERSION}
+FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG BASEOS
 
 # Copy installed extensions and configurations from builder
