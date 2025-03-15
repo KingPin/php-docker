@@ -118,7 +118,7 @@ RUN if [ "$BASEOS" = "bullseye" ] || [ "$BASEOS" = "bookworm" ]; then \
             libpng \
             imagemagick \
             c-client \
-            libsnappy \
+            snappy \
             libpq \
             net-snmp-libs \
             tidyhtml-libs \
