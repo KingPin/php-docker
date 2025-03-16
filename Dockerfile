@@ -137,13 +137,35 @@ RUN if [ "$BASEOS" = "bookworm" ]; then \
 ENV PHP_MEMORY_LIMIT=256M \
     PHP_UPLOAD_MAX_FILESIZE=64M \
     PHP_POST_MAX_SIZE=64M \
-    PHP_MAX_EXECUTION_TIME=300
+    PHP_MAX_EXECUTION_TIME=300 \
+    PHP_MAX_INPUT_VARS=1000 \
+    PHP_ERROR_REPORTING=E_ALL \
+    PHP_DISPLAY_ERRORS=Off \
+    PHP_LOG_ERRORS=On \
+    PHP_OPCACHE_MEMORY_CONSUMPTION=128 \
+    PHP_OPCACHE_INTERNED_STRINGS_BUFFER=16 \
+    PHP_OPCACHE_MAX_ACCELERATED_FILES=10000 \
+    PHP_OPCACHE_REVALIDATE_FREQ=0 \
+    PHP_SESSION_GC_MAXLIFETIME=1440 \
+    PHP_MAX_FILE_UPLOADS=20 \
+    PHP_DATE_TIMEZONE=UTC
 
 # Add configuration files
 RUN echo "memory_limit = ${PHP_MEMORY_LIMIT}" > /usr/local/etc/php/conf.d/memory-limit.ini && \
     echo "upload_max_filesize = ${PHP_UPLOAD_MAX_FILESIZE}" > /usr/local/etc/php/conf.d/upload-limit.ini && \
     echo "post_max_size = ${PHP_POST_MAX_SIZE}" > /usr/local/etc/php/conf.d/post-limit.ini && \
-    echo "max_execution_time = ${PHP_MAX_EXECUTION_TIME}" > /usr/local/etc/php/conf.d/max-execution-time.ini
+    echo "max_execution_time = ${PHP_MAX_EXECUTION_TIME}" > /usr/local/etc/php/conf.d/max-execution-time.ini && \
+    echo "max_input_vars = ${PHP_MAX_INPUT_VARS}" > /usr/local/etc/php/conf.d/max-input-vars.ini && \
+    echo "error_reporting = ${PHP_ERROR_REPORTING}" > /usr/local/etc/php/conf.d/error-reporting.ini && \
+    echo "display_errors = ${PHP_DISPLAY_ERRORS}" >> /usr/local/etc/php/conf.d/error-reporting.ini && \
+    echo "log_errors = ${PHP_LOG_ERRORS}" >> /usr/local/etc/php/conf.d/error-reporting.ini && \
+    echo "opcache.memory_consumption = ${PHP_OPCACHE_MEMORY_CONSUMPTION}" > /usr/local/etc/php/conf.d/opcache-config.ini && \
+    echo "opcache.interned_strings_buffer = ${PHP_OPCACHE_INTERNED_STRINGS_BUFFER}" >> /usr/local/etc/php/conf.d/opcache-config.ini && \
+    echo "opcache.max_accelerated_files = ${PHP_OPCACHE_MAX_ACCELERATED_FILES}" >> /usr/local/etc/php/conf.d/opcache-config.ini && \
+    echo "opcache.revalidate_freq = ${PHP_OPCACHE_REVALIDATE_FREQ}" >> /usr/local/etc/php/conf.d/opcache-config.ini && \
+    echo "session.gc_maxlifetime = ${PHP_SESSION_GC_MAXLIFETIME}" > /usr/local/etc/php/conf.d/session.ini && \
+    echo "max_file_uploads = ${PHP_MAX_FILE_UPLOADS}" >> /usr/local/etc/php/conf.d/upload-limit.ini && \
+    echo "date.timezone = ${PHP_DATE_TIMEZONE}" > /usr/local/etc/php/conf.d/timezone.ini
 
 # Create non-root user for better security
 RUN if [ "$BASEOS" != "alpine" ]; then \
