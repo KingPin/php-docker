@@ -42,7 +42,7 @@ RUN install-php-extensions \
     # File operation extensions
     zip bz2 \
     # Utility extensions
-    amqp bcmath calendar ctype exif intl imap ldap mbstring \
+    amqp bcmath calendar ctype exif intl imap ldap mbstring mcrypt \
     mongodb snmp tidy timezonedb uuid vips xsl yaml \
     # Package manager
     @composer
