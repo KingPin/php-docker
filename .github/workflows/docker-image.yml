@@ -5,6 +5,8 @@ on:
     - cron: '31 16 * * 3'
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
