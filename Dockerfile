@@ -42,7 +42,7 @@ RUN install-php-extensions \
     # File operation extensions
     zip bz2 \
     # Utility extensions
-    amqp bcmath calendar ctype exif intl imap ldap mbstring mcrypt \
+    amqp bcmath calendar ctype exif intl imagick imap ldap mbstring mcrypt \
     mongodb snmp tidy timezonedb uuid vips xsl yaml \
     # Package manager
     @composer
@@ -52,13 +52,12 @@ RUN if command -v a2enmod; then \
       a2enmod rewrite headers; \
     fi
 
-# Add mcrypt and imagick based on PHP version
+# Add mcrypt based on PHP version
 RUN case "$PHPVERSION" in \
-        8.0|8.1|8.2) \
-            install-php-extensions imagick; \
+        8.0|8.1|8.2|8.3) \
+            install-php-extensions mcrypt; \
             ;; \
-        8.3) \
-            install-php-extensions imagick/imagick@master; \
+        8.4) \
             ;; \
         *) \
             ;; \
