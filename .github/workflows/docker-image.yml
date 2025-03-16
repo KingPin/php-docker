@@ -27,12 +27,8 @@ jobs:
           echo '{
             "php-version": ["8.1", "8.2", "8.3", "8.4"],
             "php-type": ["cli", "fpm", "apache"],
-            "php-base-os": ["bullseye", "bookworm", "alpine"],
+            "php-base-os": ["bookworm", "alpine"],
             "exclude": [
-              {"php-version": "8.1", "php-base-os": "bullseye"},
-              {"php-version": "8.2", "php-base-os": "bullseye"},
-              {"php-version": "8.3", "php-base-os": "bullseye"},
-              {"php-version": "8.4", "php-base-os": "bullseye"},
               {"php-type": "apache", "php-base-os": "alpine"}
             ]
           }' >> $GITHUB_OUTPUT
@@ -122,9 +118,17 @@ jobs:
             echo "GHCR_ADDITIONAL_TAGS=ghcr.io/kingpin/${{ github.event.repository.name }}:latest,ghcr.io/kingpin/${{ github.event.repository.name }}:${MAJOR_VERSION},ghcr.io/kingpin/${{ github.event.repository.name }}:${MINOR_VERSION}" >> $GITHUB_ENV
             echo "QUAY_ADDITIONAL_TAGS=quay.io/kingpinx1/${{ github.event.repository.name }}:latest,quay.io/kingpinx1/${{ github.event.repository.name }}:${MAJOR_VERSION},quay.io/kingpinx1/${{ github.event.repository.name }}:${MINOR_VERSION}" >> $GITHUB_ENV
           else
-            echo "DOCKERHUB_ADDITIONAL_TAGS=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
-            echo "GHCR_ADDITIONAL_TAGS=ghcr.io/kingpin/${{ github.event.repository.name }}:${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},ghcr.io/kingpin/${{ github.event.repository.name }}:${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
-            echo "QUAY_ADDITIONAL_TAGS=quay.io/kingpinx1/${{ github.event.repository.name }}:${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},quay.io/kingpinx1/${{ github.event.repository.name }}:${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+            # Regular version tags 
+            ADDITIONAL_TAGS="${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}"
+            
+            # Add bullseye-compatible tags for bookworm images
+            if [[ "${{ matrix.php-base-os }}" == "bookworm" ]]; then
+              ADDITIONAL_TAGS="${ADDITIONAL_TAGS},${{ matrix.php-version }}-${{ matrix.php-type }}-bullseye,${MAJOR_VERSION}-${{ matrix.php-type }}-bullseye,${MINOR_VERSION}-${{ matrix.php-type }}-bullseye"
+            fi
+            
+            echo "DOCKERHUB_ADDITIONAL_TAGS=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${ADDITIONAL_TAGS//,/,docker.io\/${{ secrets.DOCKERHUB_USERNAME }}\/${{ github.event.repository.name }}:}" >> $GITHUB_ENV
+            echo "GHCR_ADDITIONAL_TAGS=ghcr.io/kingpin/${{ github.event.repository.name }}:${ADDITIONAL_TAGS//,/,ghcr.io\/kingpin\/${{ github.event.repository.name }}:}" >> $GITHUB_ENV
+            echo "QUAY_ADDITIONAL_TAGS=quay.io/kingpinx1/${{ github.event.repository.name }}:${ADDITIONAL_TAGS//,/,quay.io\/kingpinx1\/${{ github.event.repository.name }}:}" >> $GITHUB_ENV
           fi
           echo "::endgroup::"
 
