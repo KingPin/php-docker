@@ -8,6 +8,10 @@ on:
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/docker-image.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
