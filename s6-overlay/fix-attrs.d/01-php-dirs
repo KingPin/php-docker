@@ -1,0 +1,2 @@
+/var/www/html true appuser:appuser 0755 0755
+/usr/local/etc/php/conf.d true root:root 0644 0755
