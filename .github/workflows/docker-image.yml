@@ -116,7 +116,7 @@ jobs:
           echo "IMAGE_NAME=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "GHCR_TAG=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
-          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php.version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
 
       - name: Set smart tags
         id: smart-tags
@@ -276,6 +276,10 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
+          build-args: |
+            VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+            PHPVERSION=${{ matrix.php-version }}
+            BASEOS=${{ matrix.php-base-os }}
           tags: |
             ghcr.io/kingpin/${{ github.event.repository.name }}:pr-${{ github.event.pull_request.number }}-${{ env.IMAGE_NAME }}
 
