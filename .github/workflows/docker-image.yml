@@ -10,10 +10,18 @@ on:
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
+      - 's6-overlay/**'
+    paths-ignore:
+      - 'README.md'
+      - '*.md'
   pull_request:
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
+      - 's6-overlay/**'
+    paths-ignore:
+      - 'README.md'
+      - '*.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
