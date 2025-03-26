@@ -116,7 +116,7 @@ jobs:
           echo "IMAGE_NAME=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
           echo "GHCR_TAG=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
-          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php.version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
+          echo "QUAY_TAG=quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}" >> $GITHUB_ENV
 
       - name: Set smart tags
         id: smart-tags
