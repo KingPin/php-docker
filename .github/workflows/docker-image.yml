@@ -11,17 +11,17 @@ on:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
       - 's6-overlay/**'
-    paths-ignore:
-      - 'README.md'
-      - '*.md'
+      - '!README.md'
+      - '!*.md'
+      - '!docs/**'
   pull_request:
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
       - 's6-overlay/**'
-    paths-ignore:
-      - 'README.md'
-      - '*.md'
+      - '!README.md'
+      - '!*.md'
+      - '!docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -137,7 +137,7 @@ jobs:
             
             # Add bullseye-compatible tags for bookworm images
             if [[ "${{ matrix.php-base-os }}" == "bookworm" ]]; then
-              ADDITIONAL_TAGS="${ADDITIONAL_TAGS},${{ matrix.php-version }}-${{ matrix.php-type }}-bullseye,${MAJOR_VERSION}-${{ matrix.php-type }}-bullseye,${MINOR_VERSION}-${{ matrix.php-type }}-bullseye"
+              ADDITIONAL_TAGS="${ADDITIONAL_TAGS},${{ matrix.php.version }}-${{ matrix.php-type }}-bullseye,${MAJOR_VERSION}-${{ matrix.php-type }}-bullseye,${MINOR_VERSION}-${{ matrix.php-type }}-bullseye"
             fi
             
             echo "DOCKERHUB_ADDITIONAL_TAGS=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${ADDITIONAL_TAGS//,/,docker.io\/${{ secrets.DOCKERHUB_USERNAME }}\/${{ github.event.repository.name }}:}" >> $GITHUB_ENV
