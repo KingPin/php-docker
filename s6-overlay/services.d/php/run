@@ -1,7 +1,7 @@
-#!/usr/bin/with-contenv bash
+#!/bin/sh
+# Note: Changed from bash to sh for better compatibility
 
 # This script determines how to start the PHP service based on the image type
-# The PHP_TYPE variable will be set in the entrypoint based on the image variant
 
 # Detect PHP type from container environment or image tag
 PHP_TYPE=${PHP_TYPE:-$(php -r 'echo (php_sapi_name() === "cli" ? "cli" : (php_sapi_name() === "fpm" ? "fpm" : "apache"));')}

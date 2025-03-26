@@ -212,14 +212,25 @@ RUN mkdir -p \
     /etc/services.d/php
 
 # Copy S6 configuration files
-COPY ./s6-overlay/cont-init.d/ /etc/cont-init.d/
-COPY ./s6-overlay/services.d/ /etc/services.d/
+COPY s6-overlay/cont-init.d/ /etc/cont-init.d/
+COPY s6-overlay/services.d/ /etc/services.d/
 
-# Set permissions for S6 scripts
+# Set permissions for S6 scripts and ensure they have correct line endings
 RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
     # Ensure S6 directories have proper permissions
     mkdir -p /var/run/s6 && \
-    chmod -R 755 /var/run/s6 
+    chmod -R 755 /var/run/s6 && \
+    # Make sure scripts are executable and have correct line endings
+    if [ "$BASEOS" = "bookworm" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends dos2unix && \
+        dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$BASEOS" = "alpine" ]; then \
+        apk add --no-cache dos2unix && \
+        dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
+        apk del --no-cache dos2unix; \
+    fi
 
 ENTRYPOINT ["/init"]
 CMD ["php", "-a"]
