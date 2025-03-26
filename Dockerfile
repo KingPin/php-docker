@@ -200,22 +200,26 @@ RUN if [ "$BASEOS" != "alpine" ]; then \
 
 # Set working directory and permissions
 WORKDIR /var/www/html
-RUN chown -R appuser:appuser /var/www/html && \
-    chmod -R 755 /var/www/html
+RUN mkdir -p /var/www/html && \
+    chown -R appuser:appuser /var/www/html && \
+    chmod -R 755 /var/www/html && \
+    mkdir -p /usr/local/etc/php/conf.d && \
+    chmod -R 755 /usr/local/etc/php/conf.d
 
 # Create S6 directory structure
 RUN mkdir -p \
     /etc/cont-init.d \
-    /etc/services.d/php \
-    /etc/fix-attrs.d
+    /etc/services.d/php
 
 # Copy S6 configuration files
 COPY ./s6-overlay/cont-init.d/ /etc/cont-init.d/
 COPY ./s6-overlay/services.d/ /etc/services.d/
-COPY ./s6-overlay/fix-attrs.d/ /etc/fix-attrs.d/
 
 # Set permissions for S6 scripts
-RUN chmod -R 755 /etc/cont-init.d /etc/services.d /etc/fix-attrs.d
+RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
+    # Ensure S6 directories have proper permissions
+    mkdir -p /var/run/s6 && \
+    chmod -R 755 /var/run/s6 
 
 ENTRYPOINT ["/init"]
 CMD ["php", "-a"]
