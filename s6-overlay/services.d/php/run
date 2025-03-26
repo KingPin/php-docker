@@ -1,0 +1,35 @@
+#!/usr/bin/with-contenv bash
+
+# This script determines how to start the PHP service based on the image type
+# The PHP_TYPE variable will be set in the entrypoint based on the image variant
+
+# Detect PHP type from container environment or image tag
+PHP_TYPE=${PHP_TYPE:-$(php -r 'echo (php_sapi_name() === "cli" ? "cli" : (php_sapi_name() === "fpm" ? "fpm" : "apache"));')}
+
+echo "Starting PHP service in ${PHP_TYPE} mode..."
+
+case "$PHP_TYPE" in
+  "cli")
+    # For CLI, we just execute a long-running command or wait
+    # This is typically handled by the CMD instruction and not S6
+    echo "Running in CLI mode - service management handled by CMD"
+    sleep infinity
+    ;;
+    
+  "fpm")
+    # Start PHP-FPM with appropriate user
+    echo "Starting PHP-FPM..."
+    exec s6-setuidgid appuser php-fpm
+    ;;
+    
+  "apache")
+    # Start Apache with appropriate user
+    echo "Starting Apache..."
+    exec apache2-foreground
+    ;;
+    
+  *)
+    echo "Unknown PHP type: ${PHP_TYPE}, defaulting to CLI mode"
+    sleep infinity
+    ;;
+esac

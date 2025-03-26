@@ -79,9 +79,47 @@ RUN case $(uname -m) in \
 # Second stage: production
 FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG BASEOS
+ARG S6_OVERLAY_VERSION=3.2.0.2
+ARG TARGETARCH
 
 # Copy installed extensions and configurations from builder
 COPY --from=builder /usr/local/ /usr/local/
+
+# Install S6 Overlay init system
+RUN if [ "$BASEOS" = "bookworm" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            xz-utils \
+            ca-certificates \
+            wget && \
+        case "${TARGETARCH}" in \
+            "amd64") S6_ARCH="x86_64" ;; \
+            "arm64") S6_ARCH="aarch64" ;; \
+            "arm") S6_ARCH="armhf" ;; \
+            *) S6_ARCH="x86_64" ;; \
+        esac && \
+        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+        tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
+        tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
+        rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
+    elif [ "$BASEOS" = "alpine" ]; then \
+        apk add --no-cache \
+            xz \
+            ca-certificates \
+            wget && \
+        case "${TARGETARCH}" in \
+            "amd64") S6_ARCH="x86_64" ;; \
+            "arm64") S6_ARCH="aarch64" ;; \
+            "arm") S6_ARCH="armhf" ;; \
+            *) S6_ARCH="x86_64" ;; \
+        esac && \
+        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+        tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
+        tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
+        rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
+    fi
 
 # Install required system libraries based on OS
 RUN if [ "$BASEOS" = "bookworm" ]; then \
@@ -133,7 +171,7 @@ RUN if [ "$BASEOS" = "bookworm" ]; then \
             libxpm; \
     fi
 
-# Set useful PHP environment variables
+# Set useful PHP environment variables with defaults
 ENV PHP_MEMORY_LIMIT=256M \
     PHP_UPLOAD_MAX_FILESIZE=64M \
     PHP_POST_MAX_SIZE=64M \
@@ -148,24 +186,8 @@ ENV PHP_MEMORY_LIMIT=256M \
     PHP_OPCACHE_REVALIDATE_FREQ=0 \
     PHP_SESSION_GC_MAXLIFETIME=1440 \
     PHP_MAX_FILE_UPLOADS=20 \
-    PHP_DATE_TIMEZONE=UTC
-
-# Add configuration files
-RUN echo "memory_limit = ${PHP_MEMORY_LIMIT}" > /usr/local/etc/php/conf.d/memory-limit.ini && \
-    echo "upload_max_filesize = ${PHP_UPLOAD_MAX_FILESIZE}" > /usr/local/etc/php/conf.d/upload-limit.ini && \
-    echo "post_max_size = ${PHP_POST_MAX_SIZE}" > /usr/local/etc/php/conf.d/post-limit.ini && \
-    echo "max_execution_time = ${PHP_MAX_EXECUTION_TIME}" > /usr/local/etc/php/conf.d/max-execution-time.ini && \
-    echo "max_input_vars = ${PHP_MAX_INPUT_VARS}" > /usr/local/etc/php/conf.d/max-input-vars.ini && \
-    echo "error_reporting = ${PHP_ERROR_REPORTING}" > /usr/local/etc/php/conf.d/error-reporting.ini && \
-    echo "display_errors = ${PHP_DISPLAY_ERRORS}" >> /usr/local/etc/php/conf.d/error-reporting.ini && \
-    echo "log_errors = ${PHP_LOG_ERRORS}" >> /usr/local/etc/php/conf.d/error-reporting.ini && \
-    echo "opcache.memory_consumption = ${PHP_OPCACHE_MEMORY_CONSUMPTION}" > /usr/local/etc/php/conf.d/opcache-config.ini && \
-    echo "opcache.interned_strings_buffer = ${PHP_OPCACHE_INTERNED_STRINGS_BUFFER}" >> /usr/local/etc/php/conf.d/opcache-config.ini && \
-    echo "opcache.max_accelerated_files = ${PHP_OPCACHE_MAX_ACCELERATED_FILES}" >> /usr/local/etc/php/conf.d/opcache-config.ini && \
-    echo "opcache.revalidate_freq = ${PHP_OPCACHE_REVALIDATE_FREQ}" >> /usr/local/etc/php/conf.d/opcache-config.ini && \
-    echo "session.gc_maxlifetime = ${PHP_SESSION_GC_MAXLIFETIME}" > /usr/local/etc/php/conf.d/session.ini && \
-    echo "max_file_uploads = ${PHP_MAX_FILE_UPLOADS}" >> /usr/local/etc/php/conf.d/upload-limit.ini && \
-    echo "date.timezone = ${PHP_DATE_TIMEZONE}" > /usr/local/etc/php/conf.d/timezone.ini
+    PHP_DATE_TIMEZONE=UTC \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 # Create non-root user for better security
 RUN if [ "$BASEOS" != "alpine" ]; then \
@@ -181,8 +203,19 @@ WORKDIR /var/www/html
 RUN chown -R appuser:appuser /var/www/html && \
     chmod -R 755 /var/www/html
 
-# Use a non-root user by default
-USER appuser
+# Create S6 directory structure
+RUN mkdir -p \
+    /etc/cont-init.d \
+    /etc/services.d/php \
+    /etc/fix-attrs.d
 
-# Set default command
+# Copy S6 configuration files
+COPY ./s6-overlay/cont-init.d/ /etc/cont-init.d/
+COPY ./s6-overlay/services.d/ /etc/services.d/
+COPY ./s6-overlay/fix-attrs.d/ /etc/fix-attrs.d/
+
+# Set permissions for S6 scripts
+RUN chmod -R 755 /etc/cont-init.d /etc/services.d /etc/fix-attrs.d
+
+ENTRYPOINT ["/init"]
 CMD ["php", "-a"]
