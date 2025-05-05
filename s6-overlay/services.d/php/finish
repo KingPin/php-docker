@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bash
+
+# Handle service termination
+echo "PHP service terminated with exit code $1"
+
+# We only want to shut down the container if this service exits unexpectedly
+if [ "$1" -ne 0 ]; then
+  echo "PHP service failed, shutting down container"
+  s6-svscanctl -t /var/run/s6/services
+fi

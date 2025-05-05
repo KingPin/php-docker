@@ -1,0 +1,18 @@
+# .github/actions/docker-setup/action.yml
+name: 'Docker Setup'
+description: 'Sets up Docker for multi-platform builds'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Docker Setup QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: amd64,arm64,arm
+        
+    - name: Docker Setup Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          network=host
+          image=moby/buildkit:latest
