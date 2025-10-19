@@ -13,7 +13,7 @@ show_usage() {
     echo ""
     echo "Arguments:"
     echo "  v1|v2|both  - Which Dockerfile variant(s) to build"
-    echo "  <tag>       - Base tag (e.g., 8.3-fpm-alpine)"
+    echo "  <tag>       - Base tag (e.g., 8.3-fpm-alpine or 8.1-cli-bookworm)"
     echo ""
     echo "Examples:"
     echo "  $0 v1 8.3-fpm-alpine           # Builds ${IMAGE_NAME}:8.3-fpm-alpine"
@@ -22,18 +22,60 @@ show_usage() {
     exit 1
 }
 
+parse_tag() {
+    local tag=$1
+    
+    # Extract PHP version (e.g., 8.3, 8.1, 7)
+    local php_version=$(echo "$tag" | grep -oE '^[0-9]+(\.[0-9]+)?' || echo "")
+    
+    # Extract variant (fpm or cli)
+    local variant=$(echo "$tag" | grep -oE '(fpm|cli)' || echo "fpm")
+    
+    # Extract base OS (alpine, bookworm, bullseye)
+    local baseos=$(echo "$tag" | grep -oE '(alpine|bookworm|bullseye)' || echo "alpine")
+    
+    # Construct VERSION arg for FROM php:${VERSION}
+    local version="${php_version}-${variant}-${baseos}"
+    
+    echo "$version|$php_version|$baseos"
+}
+
 build_v1() {
     local tag=$1
+    local parsed=$(parse_tag "$tag")
+    local version=$(echo "$parsed" | cut -d'|' -f1)
+    local phpversion=$(echo "$parsed" | cut -d'|' -f2)
+    local baseos=$(echo "$parsed" | cut -d'|' -f3)
+    
     echo "Building v1: ${IMAGE_NAME}:${tag}"
-    docker build -f Dockerfile.v1 -t "${IMAGE_NAME}:${tag}" .
+    echo "  VERSION=${version}, PHPVERSION=${phpversion}, BASEOS=${baseos}"
+    
+    docker build -f Dockerfile.v1 \
+        --build-arg VERSION="${version}" \
+        --build-arg PHPVERSION="${phpversion}" \
+        --build-arg BASEOS="${baseos}" \
+        -t "${IMAGE_NAME}:${tag}" .
+    
     echo "✓ Built ${IMAGE_NAME}:${tag}"
 }
 
 build_v2() {
     local tag=$1
     local v2_tag="${tag}-v2"
+    local parsed=$(parse_tag "$tag")
+    local version=$(echo "$parsed" | cut -d'|' -f1)
+    local phpversion=$(echo "$parsed" | cut -d'|' -f2)
+    local baseos=$(echo "$parsed" | cut -d'|' -f3)
+    
     echo "Building v2: ${IMAGE_NAME}:${v2_tag}"
-    docker build -f Dockerfile.v2 -t "${IMAGE_NAME}:${v2_tag}" .
+    echo "  VERSION=${version}, PHPVERSION=${phpversion}, BASEOS=${baseos}"
+    
+    docker build -f Dockerfile.v2 \
+        --build-arg VERSION="${version}" \
+        --build-arg PHPVERSION="${phpversion}" \
+        --build-arg BASEOS="${baseos}" \
+        -t "${IMAGE_NAME}:${v2_tag}" .
+    
     echo "✓ Built ${IMAGE_NAME}:${v2_tag}"
 }
 
