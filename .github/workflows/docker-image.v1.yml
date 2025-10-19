@@ -1,0 +1,120 @@
+name: Docker Image CI
+
+on:
+  schedule:
+    - cron: '31 16 * * 3'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-type: [cli, fpm, apache]
+        php-version: ['8.3', '8.2', '8.1', '7']
+        php-base-os: [bullseye, bookworm, alpine]
+        exclude:
+          - php-type: apache
+            php-base-os: alpine
+          - php-version: '7'
+            php-base-os: bookworm
+          - php-version: '8.3'
+            php-base-os: bullseye
+          - php-version: '8.2'
+            php-base-os: bullseye
+          - php-version: '8.1'
+            php-base-os: bullseye
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    - name: Docker Setup QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: amd64,arm64,arm
+
+    - name: Docker Setup Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to DockerHub registry
+      uses: docker/login-action@v3 
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Log into ghcr.io registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to Quay.io registry
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+    # - name: Build Docker image for testing
+    #   uses: docker/build-push-action@v6
+    #   with:
+    #     context: .
+    #     load: true
+    #     cache-from: type=gha
+    #     cache-to: type=gha,mode=max
+    #     build-args: |
+    #       VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+    #       PHPVERSION=${{ matrix.php-version }}
+    #       BASEOS=${{ matrix.php-base-os }}
+    #     tags: |
+    #       ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+
+    # - name: Test PHP
+    #   if: matrix.php-type != 'apache'
+    #   run: |
+    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -m
+
+    # - name: Test Apache
+    #   if: matrix.php-type == 'apache'
+    #   run: |
+    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -v
+    #     docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }} -l
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+        push: true
+        cache-from: type=gha,scope=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        # build-contexts: |
+          # ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}=docker-image://${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        build-args: |
+          VERSION=${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          PHPVERSION=${{ matrix.php-version }}
+          BASEOS=${{ matrix.php-base-os }}
+        tags: |
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+          quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: image
+        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}
+        format: 'sarif'
+        severity: 'CRITICAL,HIGH'
+        hide-progress: false
+        output: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base-os }}.sarif'
