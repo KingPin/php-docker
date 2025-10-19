@@ -69,8 +69,9 @@ build_v2() {
     
     echo "Building v2: ${IMAGE_NAME}:${v2_tag}"
     echo "  VERSION=${version}, PHPVERSION=${phpversion}, BASEOS=${baseos}"
+    echo "  Using BuildKit for v2 build"
     
-    docker build -f Dockerfile.v2 \
+    DOCKER_BUILDKIT=1 docker build -f Dockerfile.v2 \
         --build-arg VERSION="${version}" \
         --build-arg PHPVERSION="${phpversion}" \
         --build-arg BASEOS="${baseos}" \
