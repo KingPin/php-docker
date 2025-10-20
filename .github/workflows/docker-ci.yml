@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: [v1, v2]
-        php-version: ['8.3', '8.1']
+        php-version: ['8.3', '8.2']
         php-type: [fpm, cli]
         php-base: [alpine, bookworm]
         exclude:
@@ -224,20 +224,12 @@ jobs:
       fail-fast: false
       matrix:
         variant: [v1, v2]
-        php-version: ['8.3', '8.2', '8.1', '7']
+        php-version: ['8.3', '8.2']
         php-type: [fpm, cli, apache]
-        php-base: [alpine, bookworm, bullseye]
+        php-base: [alpine, bookworm]
         exclude:
           - php-type: apache
             php-base: alpine
-          - php-version: '7'
-            php-base: bookworm
-          - php-version: '8.3'
-            php-base: bullseye
-          - php-version: '8.2'
-            php-base: bullseye
-          - php-version: '8.1'
-            php-base: bullseye
     
     name: publish-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
     

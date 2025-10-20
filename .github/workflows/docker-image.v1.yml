@@ -13,19 +13,11 @@ jobs:
       fail-fast: false
       matrix:
         php-type: [cli, fpm, apache]
-        php-version: ['8.3', '8.2', '8.1', '7']
-        php-base-os: [bullseye, bookworm, alpine]
+        php-version: ['8.3', '8.2']
+        php-base-os: [bookworm, alpine]
         exclude:
           - php-type: apache
             php-base-os: alpine
-          - php-version: '7'
-            php-base-os: bookworm
-          - php-version: '8.3'
-            php-base-os: bullseye
-          - php-version: '8.2'
-            php-base-os: bullseye
-          - php-version: '8.1'
-            php-base-os: bullseye
 
     steps:
     - name: Checkout source
