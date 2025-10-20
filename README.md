@@ -319,6 +319,11 @@ Both v1 and v2 variants are available for all combinations below:
 | 8.2         | FPM    | Alpine    | `8.2-fpm-alpine`       | `8.2-fpm-alpine-v2`        |
 | 8.2         | FPM    | Bookworm  | `8.2-fpm-bookworm`     | `8.2-fpm-bookworm-v2`      |
 | 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`  | `8.2-apache-bookworm-v2`   |
+| 8.4         | CLI    | Alpine    | `8.4-cli-alpine`       | `8.4-cli-alpine-v2`        |
+| 8.4         | CLI    | Bookworm  | `8.4-cli-bookworm`     | `8.4-cli-bookworm-v2`      |
+| 8.4         | FPM    | Alpine    | `8.4-fpm-alpine`       | `8.4-fpm-alpine-v2`        |
+| 8.4         | FPM    | Bookworm  | `8.4-fpm-bookworm`     | `8.4-fpm-bookworm-v2`      |
+| 8.4         | Apache | Bookworm  | `8.4-apache-bookworm`  | `8.4-apache-bookworm-v2`   |
 | 8.1         | CLI    | Alpine    | `8.1-cli-alpine`       | `8.1-cli-alpine-v2`        |
 | 8.1         | CLI    | Bookworm  | `8.1-cli-bookworm`     | `8.1-cli-bookworm-v2`      |
 | 8.1         | FPM    | Alpine    | `8.1-fpm-alpine`       | `8.1-fpm-alpine-v2`        |
