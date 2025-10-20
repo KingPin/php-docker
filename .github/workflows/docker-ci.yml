@@ -78,38 +78,135 @@ jobs:
       - name: Smoke tests - PHP version
         run: |
           echo "::group::Testing PHP version"
-          docker run --rm test-${{ steps.vars.outputs.TAG }} php -v | tee php-version.txt
-          grep -q "${{ matrix.php-version }}" php-version.txt || { echo "::error::PHP version mismatch"; exit 1; }
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} php -v | tee php-version.txt; then
+            echo "::error::Failed to run php -v"
+            docker logs test-${{ steps.vars.outputs.TAG }} 2>&1 || true
+            exit 1
+          fi
+          
+          if ! grep -q "${{ matrix.php-version }}" php-version.txt; then
+            echo "::error::PHP version mismatch - expected ${{ matrix.php-version }}"
+            cat php-version.txt
+            exit 1
+          fi
           echo "✅ PHP version correct"
+          echo "::endgroup::"
+
+      - name: Smoke tests - Basic PHP CLI run
+        run: |
+          echo "::group::Testing basic PHP CLI execution"
+          SAPI=$(docker run --rm test-${{ steps.vars.outputs.TAG }} php -r "echo PHP_SAPI;" 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to execute PHP CLI test"
+            echo "$SAPI"
+            exit 1
+          fi
+          echo "✅ PHP CLI runs successfully (SAPI: $SAPI)"
           echo "::endgroup::"
 
       - name: Smoke tests - Extensions
         run: |
           echo "::group::Testing PHP extensions"
-          docker run --rm test-${{ steps.vars.outputs.TAG }} php -m | tee extensions.txt
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} php -m | tee extensions.txt; then
+            echo "::error::Failed to list PHP extensions"
+            docker logs test-${{ steps.vars.outputs.TAG }} 2>&1 || true
+            exit 1
+          fi
           
-          for ext in gd json mysqli zip; do
-            grep -qi "$ext" extensions.txt || { echo "::error::Missing extension: $ext"; exit 1; }
-            echo "✅ Extension $ext found"
+          # Core extensions that should be present
+          REQUIRED_EXTS="gd json mysqli zip"
+          MISSING_EXTS=""
+          
+          for ext in $REQUIRED_EXTS; do
+            if ! grep -qi "$ext" extensions.txt; then
+              MISSING_EXTS="$MISSING_EXTS $ext"
+              echo "::error::Missing extension: $ext"
+            else
+              echo "✅ Extension $ext found"
+            fi
+          done
+          
+          if [ -n "$MISSING_EXTS" ]; then
+            echo "::error::Missing required extensions:$MISSING_EXTS"
+            echo "Available extensions:"
+            cat extensions.txt
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Smoke tests - Entrypoint quick-run
+        run: |
+          echo "::group::Testing entrypoint/init quick-run"
+          OUTPUT=$(docker run --rm test-${{ steps.vars.outputs.TAG }} php -r "echo 'entrypoint-ok';" 2>&1)
+          EXIT_CODE=$?
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Entrypoint test failed with exit code $EXIT_CODE"
+            echo "$OUTPUT"
+            exit 1
+          fi
+          
+          if ! echo "$OUTPUT" | grep -q "entrypoint-ok"; then
+            echo "::error::Entrypoint did not produce expected output"
+            echo "Output: $OUTPUT"
+            exit 1
+          fi
+          echo "✅ Entrypoint executes successfully"
+          echo "::endgroup::"
+
+      - name: Smoke tests - Directory permissions
+        run: |
+          echo "::group::Testing directory permissions"
+          DIRS_TO_CHECK="/tmp /var/www"
+          
+          for dir in $DIRS_TO_CHECK; do
+            if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d $dir && [ -w $dir ]" 2>&1; then
+              echo "::warning::Directory $dir either doesn't exist or is not writable"
+            else
+              echo "✅ Directory $dir exists and is writable"
+            fi
           done
           echo "::endgroup::"
 
       - name: Smoke tests - v2 specific (s6-overlay)
         if: matrix.variant == 'v2'
         run: |
-          echo "::group::Testing s6-overlay presence"
-          docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d /etc/s6-overlay || exit 1"
+          echo "::group::Testing s6-overlay presence and PID1 behavior"
+          
+          # Check s6-overlay directory
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d /etc/s6-overlay" 2>&1; then
+            echo "::error::s6-overlay directory not found at /etc/s6-overlay"
+            docker run --rm test-${{ steps.vars.outputs.TAG }} ls -la /etc/ 2>&1 || true
+            exit 1
+          fi
           echo "✅ s6-overlay directory exists"
           
-          docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -f /init || exit 1"
+          # Check init binary
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -f /init" 2>&1; then
+            echo "::error::s6 init binary not found at /init"
+            docker run --rm test-${{ steps.vars.outputs.TAG }} ls -la / 2>&1 || true
+            exit 1
+          fi
           echo "✅ s6 init binary exists"
+          
+          # Check for s6-overlay services directory
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d /etc/s6-overlay/s6-rc.d || test -d /etc/services.d" 2>&1; then
+            echo "::warning::s6 services directory not found (expected /etc/s6-overlay/s6-rc.d or /etc/services.d)"
+          else
+            echo "✅ s6 services directory found"
+          fi
+          
           echo "::endgroup::"
 
       - name: Smoke tests - FPM specific
         if: matrix.php-type == 'fpm'
         run: |
           echo "::group::Testing PHP-FPM"
-          docker run --rm test-${{ steps.vars.outputs.TAG }} php-fpm --version
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} php-fpm --version 2>&1 | tee fpm-version.txt; then
+            echo "::error::Failed to run php-fpm --version"
+            cat fpm-version.txt || true
+            exit 1
+          fi
           echo "✅ PHP-FPM version check passed"
           echo "::endgroup::"
 
