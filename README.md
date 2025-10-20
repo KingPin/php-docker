@@ -5,7 +5,7 @@ Multi-architecture PHP Docker images with extensive extensions for modern web de
 [![Docker Pulls](https://img.shields.io/docker/pulls/kingpin/php-docker)](https://hub.docker.com/r/kingpin/php-docker)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kingpin/php-docker/docker-ci.yml?branch=main)](https://github.com/kingpin/php-docker/actions/workflows/docker-ci.yml)
 
-> **⚠️ Deprecation Notice**: PHP 7.x and 8.1 builds are **no longer published** as of January 2025. Existing images remain available in registries for backwards compatibility. See [Deprecated Versions](#deprecated-versions) below.
+> **⚠️ Deprecation Notice**: PHP 7, 8 and 8.1 builds are **no longer published**. Existing images remain available in registries for backwards compatibility. See [Deprecated Versions](#deprecated-versions) below.
 
 ## 🎯 Which Image Should I Use?
 
@@ -17,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 8.2 and 8.3 (actively built); PHP 7.x and 8.1 deprecated
+- **Multiple PHP Versions**: PHP 8.2 and 8.3 (actively built); PHP 7, 8 and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
