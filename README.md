@@ -5,6 +5,8 @@ Multi-architecture PHP Docker images with extensive extensions for modern web de
 [![Docker Pulls](https://img.shields.io/docker/pulls/kingpin/php-docker)](https://hub.docker.com/r/kingpin/php-docker)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kingpin/php-docker/docker-ci.yml?branch=main)](https://github.com/kingpin/php-docker/actions/workflows/docker-ci.yml)
 
+> **⚠️ Deprecation Notice**: PHP 7.x and 8.1 builds are **no longer published** as of January 2025. Existing images remain available in registries for backwards compatibility. See [Deprecated Versions](#deprecated-versions) below.
+
 ## 🎯 Which Image Should I Use?
 
 **New projects or need process supervision?** → Use **v2** images (e.g., `8.3-fpm-alpine-v2`)  
@@ -15,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 7.x (deprecated), 8.1, 8.2, and 8.3
+- **Multiple PHP Versions**: PHP 8.2 and 8.3 (actively built); PHP 7.x and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
@@ -444,6 +446,25 @@ COPY custom-php.ini /usr/local/etc/php/conf.d/
 # Install additional extensions if needed
 RUN install-php-extensions swoole
 ```
+
+## Deprecated Versions
+
+The following PHP versions are **no longer actively built** but remain available in registries for backwards compatibility:
+
+### PHP 7.x (End of Life)
+- All PHP 7.x images (7.4 and earlier)
+- Last published: January 2025
+- Available tags: `7-cli-alpine`, `7-fpm-alpine`, `7-apache-bullseye`, etc.
+
+### PHP 8.1 (End of Active Support)
+- All PHP 8.1 images
+- Last published: January 2025
+- Available tags: `8.1-cli-alpine`, `8.1-fpm-alpine`, `8.1-apache-bookworm`, etc.
+
+**Migration Path:**
+- Upgrade to PHP 8.2 or 8.3 for continued security updates and new builds
+- See [migration guide](docs/migration.md) for upgrade assistance
+- Existing images will remain available in Docker Hub, GHCR, and Quay.io
 
 ## 🏗️ Architecture Diagram
 ```
