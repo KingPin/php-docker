@@ -2,7 +2,7 @@
 
 This document lists PHP versions that are **no longer actively built** but remain available in container registries for backwards compatibility.
 
-## ⚠️ Important Notice
+## ℹ️ Important Notice
 
 - **No new builds** will be published for these versions
 - **No security updates** will be applied to these images
