@@ -5,6 +5,8 @@ Multi-architecture PHP Docker images with extensive extensions for modern web de
 [![Docker Pulls](https://img.shields.io/docker/pulls/kingpin/php-docker)](https://hub.docker.com/r/kingpin/php-docker)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kingpin/php-docker/docker-ci.yml?branch=main)](https://github.com/kingpin/php-docker/actions/workflows/docker-ci.yml)
 
+> **⚠️ Deprecation Notice**: PHP 7.x, 8.0 and 8.1 builds are **no longer published**. Existing images remain available in registries for backwards compatibility. See [Deprecated Versions](#deprecated-versions) below.
+
 ## 🎯 Which Image Should I Use?
 
 **New projects or need process supervision?** → Use **v2** images (e.g., `8.3-fpm-alpine-v2`)  
@@ -15,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 7.x (deprecated), 8.1, 8.2, and 8.3
+- **Multiple PHP Versions**: PHP 8.2 and 8.3 (actively built); PHP 7, 8 and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
@@ -324,23 +326,29 @@ Both v1 and v2 variants are available for all combinations below:
 | 8.4         | FPM    | Alpine    | `8.4-fpm-alpine`       | `8.4-fpm-alpine-v2`        |
 | 8.4         | FPM    | Bookworm  | `8.4-fpm-bookworm`     | `8.4-fpm-bookworm-v2`      |
 | 8.4         | Apache | Bookworm  | `8.4-apache-bookworm`  | `8.4-apache-bookworm-v2`   |
-| 8.1         | CLI    | Alpine    | `8.1-cli-alpine`       | `8.1-cli-alpine-v2`        |
-| 8.1         | CLI    | Bookworm  | `8.1-cli-bookworm`     | `8.1-cli-bookworm-v2`      |
-| 8.1         | FPM    | Alpine    | `8.1-fpm-alpine`       | `8.1-fpm-alpine-v2`        |
-| 8.1         | FPM    | Bookworm  | `8.1-fpm-bookworm`     | `8.1-fpm-bookworm-v2`      |
-| 8.1         | Apache | Bookworm  | `8.1-apache-bookworm`  | `8.1-apache-bookworm-v2`   |
 
 > **Note:** PHP 8.1+ images are built on Bookworm (Debian 12). Bullseye tags redirect to Bookworm for PHP 8.1+.
 
 ### Deprecated Tags (v1 only)
 
-PHP 7.x images are available but no longer actively maintained:
+The following tags are deprecated and will not be built going forward, but remain available in registries for backwards compatibility:
 
-- `7-cli-bullseye`, `7-cli-alpine`
-- `7-fpm-bullseye`, `7-fpm-alpine`
-- `7-apache-bullseye`
+- PHP 7.x:
+  - `7-cli-bullseye`, `7-cli-alpine`
+  - `7-fpm-bullseye`, `7-fpm-alpine`
+  - `7-apache-bullseye`
 
-> **Important:** PHP 7.x has reached end-of-life. Please upgrade to PHP 8.1+ for security and performance.
+- PHP 8.0:
+  - `8-cli-bullseye`, `8-cli-alpine`
+  - `8-fpm-bullseye`, `8-fpm-alpine`
+  - `8-apache-bullseye`
+
+- PHP 8.1:
+  - `8.1-cli-bullseye`, `8.1-cli-bookworm`, `8.1-cli-alpine`
+  - `8.1-fpm-bullseye`, `8.1-fpm-bookworm`, `8.1-fpm-alpine`
+  - `8.1-apache-bullseye`, `8.1-apache-bookworm`
+
+> **Important:** These versions are deprecated. Please upgrade to PHP 8.2 or 8.3 for security and performance.
 
 ## 📊 Image Sizes
 
@@ -449,6 +457,25 @@ COPY custom-php.ini /usr/local/etc/php/conf.d/
 # Install additional extensions if needed
 RUN install-php-extensions swoole
 ```
+
+## Deprecated Versions
+
+The following PHP versions are **no longer actively built** but remain available in registries for backwards compatibility:
+
+### PHP 7.x (End of Life)
+- All PHP 7.x images (7.4 and earlier)
+- Last published: January 2025
+- Available tags: `7-cli-alpine`, `7-fpm-alpine`, `7-apache-bullseye`, etc.
+
+### PHP 8.1 (End of Active Support)
+- All PHP 8.1 images
+- Last published: January 2025
+- Available tags: `8.1-cli-alpine`, `8.1-fpm-alpine`, `8.1-apache-bookworm`, etc.
+
+**Migration Path:**
+- Upgrade to PHP 8.2 or 8.3 for continued security updates and new builds
+- See [migration guide](docs/migration.md) for upgrade assistance
+- Existing images will remain available in Docker Hub, GHCR, and Quay.io
 
 ## 🏗️ Architecture Diagram
 ```

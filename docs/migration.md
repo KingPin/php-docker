@@ -2,6 +2,8 @@
 
 This guide helps you migrate from v1 (legacy) to v2 (modern) PHP Docker images.
 
+> **ℹ️ Note on Deprecated Versions**: PHP 7.x and 8.1 are no longer actively built. If you're using these versions, please also review the [deprecated images guide](deprecated-images.md) for upgrade paths to PHP 8.2 or 8.3.
+
 ## Should You Migrate?
 
 **Consider migrating to v2 if:**
