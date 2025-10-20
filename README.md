@@ -5,7 +5,7 @@ Multi-architecture PHP Docker images with extensive extensions for modern web de
 [![Docker Pulls](https://img.shields.io/docker/pulls/kingpin/php-docker)](https://hub.docker.com/r/kingpin/php-docker)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kingpin/php-docker/docker-ci.yml?branch=main)](https://github.com/kingpin/php-docker/actions/workflows/docker-ci.yml)
 
-> **⚠️ Deprecation Notice**: PHP 7, 8 and 8.1 builds are **no longer published**. Existing images remain available in registries for backwards compatibility. See [Deprecated Versions](#deprecated-versions) below.
+> **⚠️ Deprecation Notice**: PHP 7.x, 8.0 and 8.1 builds are **no longer published**. Existing images remain available in registries for backwards compatibility. See [Deprecated Versions](#deprecated-versions) below.
 
 ## 🎯 Which Image Should I Use?
 
