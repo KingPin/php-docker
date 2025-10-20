@@ -3,18 +3,26 @@
 Multi-architecture PHP Docker images with extensive extensions for modern web development.
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/kingpin/php-docker)](https://hub.docker.com/r/kingpin/php-docker)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kingpin/php-docker/docker-image.yml?branch=main)](https://github.com/kingpin/php-docker/actions/workflows/docker-image.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kingpin/php-docker/docker-ci.yml?branch=main)](https://github.com/kingpin/php-docker/actions/workflows/docker-ci.yml)
+
+## 🎯 Which Image Should I Use?
+
+**New projects or need process supervision?** → Use **v2** images (e.g., `8.3-fpm-alpine-v2`)  
+**Existing deployments or maximum compatibility?** → Use **v1** images (e.g., `8.3-fpm-alpine`)
+
+See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 8.1, 8.2, and 8.3
+- **Multiple PHP Versions**: PHP 7.x (deprecated), 8.1, 8.2, and 8.3
 - **Multiple Server Types**: CLI, FPM, and Apache
-- **Base OS Options**: Alpine (lightweight) and Debian (Bookworm)
+- **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
 - **Latest Composer**: Always ships with the latest Composer version
 - **Image Processing Tools**: Includes ImageMagick, GD, and various image optimization utilities
 - **Apache Mods**: Includes Apache rewrite module (for Apache variants)
+- **v2: s6-overlay init**: Proper PID 1 and service supervision for reliable multi-process containers
 
 ## Environment Variables
 
@@ -63,6 +71,8 @@ docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-do
 
 ## 🚀 Quick Start
 
+### v1 (Legacy/Compatible)
+
 ```bash
 # Run PHP CLI
 docker run --rm kingpin/php-docker:8.3-cli-alpine php -v
@@ -74,50 +84,118 @@ docker run --rm -v $(pwd):/app -w /app kingpin/php-docker:8.3-cli-alpine php scr
 docker run -d -p 9000:9000 -v $(pwd):/var/www/html kingpin/php-docker:8.3-fpm-alpine
 ```
 
+### v2 (Modern/Supervised)
+
+```bash
+# Run PHP CLI with s6-overlay
+docker run --rm kingpin/php-docker:8.3-cli-alpine-v2 php -v
+
+# Run with your code mounted
+docker run --rm -v $(pwd):/app -w /app kingpin/php-docker:8.3-cli-alpine-v2 php script.php
+
+# Start PHP-FPM with s6 supervision
+docker run -d -p 9000:9000 -v $(pwd):/var/www/html kingpin/php-docker:8.3-fpm-alpine-v2
+```
+
+## v1 vs v2 Comparison
+
+We maintain **two image variants** to support both existing users and modern use cases:
+
+### v1 (Legacy) - Tags without `-v2` suffix
+
+**Purpose:** Maximum compatibility with existing deployments and stable behavior.
+
+**Key Characteristics:**
+
+- Simpler Dockerfile with fewer runtime layers
+- No s6-overlay or external init system
+- Builds with standard `docker build` (no BuildKit required)
+- Smaller image footprint in some configurations
+
+**Pros:**
+
+✅ Drop-in replacement for existing deployments  
+✅ Simpler container runtime behavior  
+✅ Smaller learning curve  
+✅ No BuildKit dependency for local builds
+
+**Cons:**
+
+❌ Less robust process supervision  
+❌ Harder to run multiple services reliably  
+❌ No built-in service health monitoring  
+❌ May not handle signals properly in all scenarios
+
+**Use v1 when:**
+
+- You have existing containers relying on legacy behavior
+- You prefer simpler runtime without init systems
+- You need maximum backward compatibility
+- You run single-process containers only
+
+### v2 (Modern) - Tags with `-v2` suffix
+
+**Purpose:** Modernized image with s6-overlay for proper init and service supervision.
+
+**Key Characteristics:**
+
+- Uses [s6-overlay](https://github.com/just-containers/s6-overlay) as PID 1 init
+- Proper signal handling and zombie process reaping
+- Service supervision and restart policies
+- BuildKit-enabled for better build performance and caching
+
+**Pros:**
+
+✅ Proper PID 1 and process supervision (s6)  
+✅ Safe for running FPM + sidecar processes (e.g., cron, queue workers)  
+✅ Better build performance with BuildKit cache mounts  
+✅ Easier to add background services and health checks  
+✅ Handles container signals properly
+
+**Cons:**
+
+❌ Requires Docker BuildKit/buildx for advanced features  
+❌ Slightly larger image due to s6-overlay (~2-3MB)  
+❌ Different runtime behavior may require minor adjustments  
+❌ More complex init system to understand
+
+**Use v2 when:**
+
+- You need reliable multi-process containers
+- You want proper signal handling and process supervision
+- You're starting a new project
+- You run background workers or cron alongside FPM
+
+> **Migration Guide:** See [docs/migration.md](docs/migration.md) for detailed migration steps and compatibility notes.
+
 ## Troubleshooting
 
-### Common Issues and Solutions
+For common issues and solutions, see [docs/troubleshooting.md](docs/troubleshooting.md).
 
-#### Container exits immediately
-**Issue**: The container stops right after starting.  
-**Solution**: For FPM and Apache variants, ensure you're not overriding the CMD. For CLI variants, provide a command that keeps the container running if needed.
+Quick tips:
 
-```bash
-docker run -d kingpin/php-docker:8.3-cli-alpine tail -f /dev/null
-```
+- **Container exits immediately**: For CLI variants, provide a long-running command
+- **Permission issues**: Match container UID with host UID using `-u` flag
+- **Missing extensions**: Extend the image and use `install-php-extensions`
+- **v2 build fails locally**: Enable Docker BuildKit or install buildx plugin
+- **v2 s6-overlay not found**: Ensure you're using the `-v2` tag
 
-#### Permission issues with mounted volumes
-**Issue**: Permission errors when writing to mounted volumes.  
-**Solution**: Match the container's user ID with your host user ID.
+## Local Development & Testing
 
-```bash
-docker run -u $(id -u):$(id -g) -v $(pwd):/app kingpin/php-docker:8.3-cli-alpine php script.php
-```
+For contributors and advanced users, see [docs/local-build.md](docs/local-build.md) for:
 
-#### Missing PHP extension
-**Issue**: Your application requires an extension not included in the image.  
-**Solution**: Create a custom Dockerfile to install additional extensions.
+- Using the `test-build.sh` helper script
+- Building both v1 and v2 variants locally
+- Running smoke tests
 
-```dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine
-RUN install-php-extensions <extension-name>
-```
+## CI/CD & Publishing
 
-#### Memory limit errors
-**Issue**: PHP script exceeds memory limit.  
-**Solution**: Increase the memory limit.
+Images are automatically built, tested, and published via GitHub Actions:
 
-```bash
-docker run -e PHP_MEMORY_LIMIT=1G kingpin/php-docker:8.3-cli-alpine php script.php
-```
+- **All branches/PRs**: Build and test only (no publishing)
+- **`main` branch**: Build, test, and publish to all registries
 
-#### Slow PHP performance
-**Issue**: PHP scripts running slowly.  
-**Solution**: Check OPcache settings and enable JIT for PHP 8.0+.
-
-```bash
-docker run -e PHP_OPCACHE_MEMORY_CONSUMPTION=256 kingpin/php-docker:8.3-cli-alpine php script.php
-```
+For more details, see [docs/ci.md](docs/ci.md).
 
 ## Security Considerations
 
@@ -212,61 +290,66 @@ opcache.jit=1255
 
 These images are available on multiple registries for redundancy and flexibility:
 
-- Docker Hub: `docker.io/kingpin/php-docker`
-- GitHub Container Registry: `ghcr.io/kingpin/php-docker`
-- Quay.io: `quay.io/kingpinx1/php-docker`
+- **Docker Hub**: `docker.io/kingpin/php-docker`
+- **GitHub Container Registry**: `ghcr.io/kingpin/php-docker`
+- **Quay.io**: `quay.io/kingpinx1/php-docker`
+
+All registries have identical image content and tags.
 
 ## Available Tags
 
+### Tag Format
+
+- **v1 images**: `{php-version}-{type}-{os}` (e.g., `8.3-fpm-alpine`)
+- **v2 images**: `{php-version}-{type}-{os}-v2` (e.g., `8.3-fpm-alpine-v2`)
+
 ### Current Supported Images
 
-| PHP Version | Type   | OS        | Tag Example                |
-|-------------|--------|-----------|----------------------------|
-| 8.1         | CLI    | Bookworm  | `8.1-cli-bookworm`         |
-| 8.1         | CLI    | Alpine    | `8.1-cli-alpine`           |
-| 8.1         | FPM    | Bookworm  | `8.1-fpm-bookworm`         |
-| 8.1         | FPM    | Alpine    | `8.1-fpm-alpine`           |
-| 8.1         | Apache | Bookworm  | `8.1-apache-bookworm`      |
-| 8.2         | CLI    | Bookworm  | `8.2-cli-bookworm`         |
-| 8.2         | CLI    | Alpine    | `8.2-cli-alpine`           |
-| 8.2         | FPM    | Bookworm  | `8.2-fpm-bookworm`         |
-| 8.2         | FPM    | Alpine    | `8.2-fpm-alpine`           |
-| 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`      |
-| 8.3         | CLI    | Bookworm  | `8.3-cli-bookworm`         |
-| 8.3         | CLI    | Alpine    | `8.3-cli-alpine` (latest)  |
-| 8.3         | FPM    | Bookworm  | `8.3-fpm-bookworm`         |
-| 8.3         | FPM    | Alpine    | `8.3-fpm-alpine`           |
-| 8.3         | Apache | Bookworm  | `8.3-apache-bookworm`      |
+Both v1 and v2 variants are available for all combinations below:
 
-> **Note:** PHP 8.1+ are now built on Bookworm (Debian 12). For backward compatibility, using either `bullseye` or `bookworm` in the tag for PHP 8.1+ will give you the Bookworm-based image.
+| PHP Version | Type   | OS        | v1 Tag Example         | v2 Tag Example             |
+|-------------|--------|-----------|------------------------|----------------------------|
+| 8.3         | CLI    | Alpine    | `8.3-cli-alpine`       | `8.3-cli-alpine-v2`        |
+| 8.3         | CLI    | Bookworm  | `8.3-cli-bookworm`     | `8.3-cli-bookworm-v2`      |
+| 8.3         | FPM    | Alpine    | `8.3-fpm-alpine`       | `8.3-fpm-alpine-v2`        |
+| 8.3         | FPM    | Bookworm  | `8.3-fpm-bookworm`     | `8.3-fpm-bookworm-v2`      |
+| 8.3         | Apache | Bookworm  | `8.3-apache-bookworm`  | `8.3-apache-bookworm-v2`   |
+| 8.2         | CLI    | Alpine    | `8.2-cli-alpine`       | `8.2-cli-alpine-v2`        |
+| 8.2         | CLI    | Bookworm  | `8.2-cli-bookworm`     | `8.2-cli-bookworm-v2`      |
+| 8.2         | FPM    | Alpine    | `8.2-fpm-alpine`       | `8.2-fpm-alpine-v2`        |
+| 8.2         | FPM    | Bookworm  | `8.2-fpm-bookworm`     | `8.2-fpm-bookworm-v2`      |
+| 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`  | `8.2-apache-bookworm-v2`   |
+| 8.1         | CLI    | Alpine    | `8.1-cli-alpine`       | `8.1-cli-alpine-v2`        |
+| 8.1         | CLI    | Bookworm  | `8.1-cli-bookworm`     | `8.1-cli-bookworm-v2`      |
+| 8.1         | FPM    | Alpine    | `8.1-fpm-alpine`       | `8.1-fpm-alpine-v2`        |
+| 8.1         | FPM    | Bookworm  | `8.1-fpm-bookworm`     | `8.1-fpm-bookworm-v2`      |
+| 8.1         | Apache | Bookworm  | `8.1-apache-bookworm`  | `8.1-apache-bookworm-v2`   |
 
-### Deprecated Tags
+> **Note:** PHP 8.1+ images are built on Bookworm (Debian 12). Bullseye tags redirect to Bookworm for PHP 8.1+.
 
-The following tags are available but no longer built via CI:
+### Deprecated Tags (v1 only)
 
-- 7-cli-bullseye
-- 7-cli-alpine
-- 7-apache-bullseye
-- 7-fpm-bullseye
-- 7-fpm-alpine
-- 8.0-cli-bullseye
-- 8.0-cli-alpine
-- 8.0-apache-bullseye
-- 8.0-fpm-bullseye
-- 8.0-fpm-alpine
+PHP 7.x images are available but no longer actively maintained:
 
-> **Important:** PHP 7.x has been deprecated and is no longer supported. Please upgrade to PHP 8.1 or newer for security and performance improvements.
+- `7-cli-bullseye`, `7-cli-alpine`
+- `7-fpm-bullseye`, `7-fpm-alpine`
+- `7-apache-bullseye`
+
+> **Important:** PHP 7.x has reached end-of-life. Please upgrade to PHP 8.1+ for security and performance.
 
 ## 📊 Image Sizes
 
-| Type   | OS        | Approx. Size |
-|--------|-----------|--------------|
-| CLI    | Alpine    | ~80MB        |
-| CLI    | Debian    | ~140MB       |
-| FPM    | Alpine    | ~85MB        |
-| FPM    | Debian    | ~150MB       |
-| Apache | Alpine    | ~95MB        |
-| Apache | Debian    | ~180MB       |
+Approximate compressed sizes (v1 / v2):
+
+| Type   | OS        | v1 Size | v2 Size  | Delta    |
+|--------|-----------|---------|----------|----------|
+| CLI    | Alpine    | ~80MB   | ~83MB    | +3MB     |
+| CLI    | Bookworm  | ~140MB  | ~143MB   | +3MB     |
+| FPM    | Alpine    | ~85MB   | ~88MB    | +3MB     |
+| FPM    | Bookworm  | ~150MB  | ~153MB   | +3MB     |
+| Apache | Bookworm  | ~180MB  | ~183MB   | +3MB     |
+
+> v2 overhead is primarily the s6-overlay binaries (~2-3MB per image).
 
 ## Pre-installed PHP Extensions
 
@@ -396,33 +479,20 @@ We welcome contributions to improve these Docker images!
 ### How to Contribute
 
 1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/new-extension
-   ```
-3. **Make your changes**
-4. **Run tests locally**
-   ```bash
-   # Test building the image
-   docker build --build-arg VERSION=8.3-cli-alpine --build-arg PHPVERSION=8.3 --build-arg BASEOS=alpine -t test-image .
-   
-   # Verify functionality
-   docker run --rm test-image php -m
-   ```
+2. **Create a feature branch**: `git checkout -b feature/new-extension`
+3. **Make your changes** (update both `Dockerfile.v1` and `Dockerfile.v2` if applicable)
+4. **Test locally**: Use `test-build.sh` to verify builds
 5. **Submit a Pull Request**
 
 ### Guidelines
 
 - Follow the existing code style and conventions
-- Add tests for new features
+- Test both v1 and v2 variants when making changes
 - Update documentation as needed
 - Keep PRs focused on a single change
 - Reference issues in commit messages
 
-### Development Workflow
-
 Our CI/CD pipeline will automatically test your changes when you submit a PR.
-For significant changes, please open an issue first to discuss what you would like to change.
 
 ## License
 
@@ -451,3 +521,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+---
+
+**Need help?** Open an issue or check our [troubleshooting guide](docs/troubleshooting.md).
