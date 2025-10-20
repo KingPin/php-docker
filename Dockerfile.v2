@@ -1,4 +1,4 @@
-ARG VERSION
+ARG VERSION=8.3-cli-alpine
 
 # First stage: builder
 FROM public.ecr.aws/docker/library/php:${VERSION} AS builder
