@@ -1,0 +1,228 @@
+name: Docker CI (v1 + v2)
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: docker-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [v1, v2]
+        php-version: ['8.3', '8.1']
+        php-type: [fpm, cli]
+        php-base: [alpine, bookworm]
+        exclude:
+          - php-type: apache
+            php-base: alpine
+    
+    name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: amd64,arm64,arm
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set build variables
+        id: vars
+        run: |
+          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
+          TAG_BASE="php-docker:${VERSION}"
+          
+          if [ "${{ matrix.variant }}" = "v2" ]; then
+            TAG="${TAG_BASE}-v2"
+            DOCKERFILE="Dockerfile.v2"
+          else
+            TAG="${TAG_BASE}"
+            DOCKERFILE="Dockerfile.v1"
+          fi
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}" >> $GITHUB_OUTPUT
+
+      - name: Build test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.vars.outputs.DOCKERFILE }}
+          load: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
+          build-args: |
+            VERSION=${{ steps.vars.outputs.VERSION }}
+            PHPVERSION=${{ matrix.php-version }}
+            BASEOS=${{ matrix.php-base }}
+          tags: test-${{ steps.vars.outputs.TAG }}
+
+      - name: Smoke tests - PHP version
+        run: |
+          echo "::group::Testing PHP version"
+          docker run --rm test-${{ steps.vars.outputs.TAG }} php -v | tee php-version.txt
+          grep -q "${{ matrix.php-version }}" php-version.txt || { echo "::error::PHP version mismatch"; exit 1; }
+          echo "✅ PHP version correct"
+          echo "::endgroup::"
+
+      - name: Smoke tests - Extensions
+        run: |
+          echo "::group::Testing PHP extensions"
+          docker run --rm test-${{ steps.vars.outputs.TAG }} php -m | tee extensions.txt
+          
+          for ext in gd json mysqli zip; do
+            grep -qi "$ext" extensions.txt || { echo "::error::Missing extension: $ext"; exit 1; }
+            echo "✅ Extension $ext found"
+          done
+          echo "::endgroup::"
+
+      - name: Smoke tests - v2 specific (s6-overlay)
+        if: matrix.variant == 'v2'
+        run: |
+          echo "::group::Testing s6-overlay presence"
+          docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d /etc/s6-overlay || exit 1"
+          echo "✅ s6-overlay directory exists"
+          
+          docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -f /init || exit 1"
+          echo "✅ s6 init binary exists"
+          echo "::endgroup::"
+
+      - name: Smoke tests - FPM specific
+        if: matrix.php-type == 'fpm'
+        run: |
+          echo "::group::Testing PHP-FPM"
+          docker run --rm test-${{ steps.vars.outputs.TAG }} php-fpm --version
+          echo "✅ PHP-FPM version check passed"
+          echo "::endgroup::"
+
+      - name: Summary
+        run: |
+          echo "::notice::✅ Build and tests passed for ${{ matrix.variant }} - ${{ steps.vars.outputs.TAG }}"
+
+  publish:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [v1, v2]
+        php-version: ['8.3', '8.2', '8.1', '7']
+        php-type: [fpm, cli, apache]
+        php-base: [alpine, bookworm, bullseye]
+        exclude:
+          - php-type: apache
+            php-base: alpine
+          - php-version: '7'
+            php-base: bookworm
+          - php-version: '8.3'
+            php-base: bullseye
+          - php-version: '8.2'
+            php-base: bullseye
+          - php-version: '8.1'
+            php-base: bullseye
+    
+    name: publish-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: amd64,arm64,arm
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Set publish variables
+        id: vars
+        run: |
+          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
+          
+          if [ "${{ matrix.variant }}" = "v2" ]; then
+            TAG_SUFFIX="-v2"
+            DOCKERFILE="Dockerfile.v2"
+          else
+            TAG_SUFFIX=""
+            DOCKERFILE="Dockerfile.v1"
+          fi
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          echo "GHCR_TAG=ghcr.io/kingpin/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          echo "QUAY_TAG=quay.io/kingpinx1/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.vars.outputs.DOCKERFILE }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
+          build-args: |
+            VERSION=${{ steps.vars.outputs.VERSION }}
+            PHPVERSION=${{ matrix.php-version }}
+            BASEOS=${{ matrix.php-base }}
+          tags: |
+            ${{ steps.vars.outputs.DOCKERHUB_TAG }}
+            ${{ steps.vars.outputs.GHCR_TAG }}
+            ${{ steps.vars.outputs.QUAY_TAG }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: ${{ steps.vars.outputs.DOCKERHUB_TAG }}
+          format: 'sarif'
+          severity: 'CRITICAL,HIGH'
+          output: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
