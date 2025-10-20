@@ -321,23 +321,30 @@ Both v1 and v2 variants are available for all combinations below:
 | 8.2         | FPM    | Alpine    | `8.2-fpm-alpine`       | `8.2-fpm-alpine-v2`        |
 | 8.2         | FPM    | Bookworm  | `8.2-fpm-bookworm`     | `8.2-fpm-bookworm-v2`      |
 | 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`  | `8.2-apache-bookworm-v2`   |
-| 8.1         | CLI    | Alpine    | `8.1-cli-alpine`       | `8.1-cli-alpine-v2`        |
-| 8.1         | CLI    | Bookworm  | `8.1-cli-bookworm`     | `8.1-cli-bookworm-v2`      |
-| 8.1         | FPM    | Alpine    | `8.1-fpm-alpine`       | `8.1-fpm-alpine-v2`        |
-| 8.1         | FPM    | Bookworm  | `8.1-fpm-bookworm`     | `8.1-fpm-bookworm-v2`      |
-| 8.1         | Apache | Bookworm  | `8.1-apache-bookworm`  | `8.1-apache-bookworm-v2`   |
+
 
 > **Note:** PHP 8.1+ images are built on Bookworm (Debian 12). Bullseye tags redirect to Bookworm for PHP 8.1+.
 
 ### Deprecated Tags (v1 only)
 
-PHP 7.x images are available but no longer actively maintained:
+The following tags are deprecated and will not be built going forward, but remain available in registries for backwards compatibility:
 
-- `7-cli-bullseye`, `7-cli-alpine`
-- `7-fpm-bullseye`, `7-fpm-alpine`
-- `7-apache-bullseye`
+- PHP 7.x:
+  - `7-cli-bullseye`, `7-cli-alpine`
+  - `7-fpm-bullseye`, `7-fpm-alpine`
+  - `7-apache-bullseye`
 
-> **Important:** PHP 7.x has reached end-of-life. Please upgrade to PHP 8.1+ for security and performance.
+- PHP 8.0:
+  - `8-cli-bullseye`, `8-cli-alpine`
+  - `8-fpm-bullseye`, `8-fpm-alpine`
+  - `8-apache-bullseye`
+
+- PHP 8.1:
+  - `8.1-cli-bullseye`, `8.1-cli-bookworm`, `8.1-cli-alpine`
+  - `8.1-fpm-bullseye`, `8.1-fpm-bookworm`, `8.1-fpm-alpine`
+  - `8.1-apache-bullseye`, `8.1-apache-bookworm`
+
+> **Important:** These versions are deprecated. Please upgrade to PHP 8.2 or 8.3 for security and performance.
 
 ## 📊 Image Sizes
 
