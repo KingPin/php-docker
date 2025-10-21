@@ -17,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 8.2 and 8.3 (actively built); PHP 7, 8 and 8.1 deprecated
+- **Multiple PHP Versions**: PHP 8.2, 8.3, and 8.4 (actively built); PHP 7.x, 8.0, and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
@@ -65,7 +65,7 @@ The following environment variables can be overridden when running containers:
 | `PHP_OPCACHE_MAX_ACCELERATED_FILES` | `10000` | OPCache maximum number of files |
 | `PHP_OPCACHE_REVALIDATE_FREQ` | `0` | How often to check script timestamps |
 
-### Example usage:
+### Example usage
 
 ```bash
 docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-docker:8.3-fpm-alpine
@@ -311,6 +311,11 @@ Both v1 and v2 variants are available for all combinations below:
 
 | PHP Version | Type   | OS        | v1 Tag Example         | v2 Tag Example             |
 |-------------|--------|-----------|------------------------|----------------------------|
+| 8.4         | CLI    | Alpine    | `8.4-cli-alpine`       | `8.4-cli-alpine-v2`        |
+| 8.4         | CLI    | Bookworm  | `8.4-cli-bookworm`     | `8.4-cli-bookworm-v2`      |
+| 8.4         | FPM    | Alpine    | `8.4-fpm-alpine`       | `8.4-fpm-alpine-v2`        |
+| 8.4         | FPM    | Bookworm  | `8.4-fpm-bookworm`     | `8.4-fpm-bookworm-v2`      |
+| 8.4         | Apache | Bookworm  | `8.4-apache-bookworm`  | `8.4-apache-bookworm-v2`   |
 | 8.3         | CLI    | Alpine    | `8.3-cli-alpine`       | `8.3-cli-alpine-v2`        |
 | 8.3         | CLI    | Bookworm  | `8.3-cli-bookworm`     | `8.3-cli-bookworm-v2`      |
 | 8.3         | FPM    | Alpine    | `8.3-fpm-alpine`       | `8.3-fpm-alpine-v2`        |
@@ -321,7 +326,6 @@ Both v1 and v2 variants are available for all combinations below:
 | 8.2         | FPM    | Alpine    | `8.2-fpm-alpine`       | `8.2-fpm-alpine-v2`        |
 | 8.2         | FPM    | Bookworm  | `8.2-fpm-bookworm`     | `8.2-fpm-bookworm-v2`      |
 | 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`  | `8.2-apache-bookworm-v2`   |
-
 
 > **Note:** PHP 8.1+ images are built on Bookworm (Debian 12). Bullseye tags redirect to Bookworm for PHP 8.1+.
 
@@ -344,7 +348,7 @@ The following tags are deprecated and will not be built going forward, but remai
   - `8.1-fpm-bullseye`, `8.1-fpm-bookworm`, `8.1-fpm-alpine`
   - `8.1-apache-bullseye`, `8.1-apache-bookworm`
 
-> **Important:** These versions are deprecated. Please upgrade to PHP 8.2 or 8.3 for security and performance.
+> **Important:** These versions are deprecated. Please upgrade to PHP 8.2, 8.3, or 8.4 for security and performance.
 
 ## 📊 Image Sizes
 

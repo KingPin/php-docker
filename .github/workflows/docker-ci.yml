@@ -4,9 +4,19 @@ on:
   push:
     branches:
       - '**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
     branches:
       - '**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   schedule:
     - cron: '0 3 * * 2'  # Weekly on Tuesday at 3:00 AM UTC
   workflow_dispatch:
@@ -22,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: [v1, v2]
-        php-version: ['8.3', '8.2']
+        php-version: ['8.4', '8.3', '8.2']
         php-type: [fpm, cli]
         php-base: [alpine, bookworm]
         exclude:
@@ -224,7 +234,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: [v1, v2]
-        php-version: ['8.3', '8.2']
+        php-version: ['8.4', '8.3', '8.2']
         php-type: [fpm, cli, apache]
         php-base: [alpine, bookworm]
         exclude:

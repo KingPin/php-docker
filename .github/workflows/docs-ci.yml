@@ -1,0 +1,82 @@
+name: Documentation CI
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: docs-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    name: Markdown Lint
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: |
+            **/*.md
+            !node_modules
+            !.github
+
+      - name: Summary
+        run: |
+          echo "✅ Markdown linting passed"
+
+  link-checker:
+    runs-on: ubuntu-latest
+    name: Check Links
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check links in markdown files
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+          check-modified-files-only: 'yes'
+          base-branch: 'main'
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ Link checking passed"
+
+  docs-summary:
+    runs-on: ubuntu-latest
+    name: Docs CI Summary
+    needs: [markdown-lint, link-checker]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          if [ "${{ needs.markdown-lint.result }}" = "success" ] && [ "${{ needs.link-checker.result }}" = "success" ]; then
+            echo "✅ All documentation checks passed"
+            exit 0
+          elif [ "${{ needs.link-checker.result }}" = "failure" ]; then
+            echo "⚠️ Link checker failed (non-blocking)"
+            exit 0
+          else
+            echo "❌ Documentation checks failed"
+            exit 1
+          fi

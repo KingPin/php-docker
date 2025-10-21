@@ -97,7 +97,7 @@ These run only via `workflow_dispatch` (manual trigger) and don't publish automa
 **Recommended settings for `main` branch:**
 
 1. **Require pull request reviews**: At least 1 approval
-2. **Require status checks**: 
+2. **Require status checks**:
    - `build-and-test` must pass
    - All matrix jobs must succeed
 3. **Require branches to be up to date**: Enable
