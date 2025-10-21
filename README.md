@@ -17,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 8.2 and 8.3 (actively built); PHP 7, 8 and 8.1 deprecated
+- **Multiple PHP Versions**: PHP 8.2, 8.3, and 8.4 (actively built); PHP 7.x, 8.0, and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
@@ -348,7 +348,7 @@ The following tags are deprecated and will not be built going forward, but remai
   - `8.1-fpm-bullseye`, `8.1-fpm-bookworm`, `8.1-fpm-alpine`
   - `8.1-apache-bullseye`, `8.1-apache-bookworm`
 
-> **Important:** These versions are deprecated. Please upgrade to PHP 8.2 or 8.3 for security and performance.
+> **Important:** These versions are deprecated. Please upgrade to PHP 8.2, 8.3, or 8.4 for security and performance.
 
 ## 📊 Image Sizes
 
