@@ -116,20 +116,20 @@ docker run -e PHP_OPCACHE_MEMORY_CONSUMPTION=256 \
   kingpin/php-docker:8.3-fpm-alpine-v2
 ```
 
-2. **Enable JIT (PHP 8.0+):**
+1. **Enable JIT (PHP 8.0+):**
 ```ini
 # Create custom php.ini
 opcache.jit_buffer_size=100M
 opcache.jit=1255
 ```
 
-3. **Use Alpine for smaller footprint:**
+1. **Use Alpine for smaller footprint:**
 ```bash
 # Alpine is lighter than Bookworm
 docker pull kingpin/php-docker:8.3-fpm-alpine-v2
 ```
 
-4. **Profile your code:**
+1. **Profile your code:**
 ```bash
 # Install xdebug for profiling
 FROM kingpin/php-docker:8.3-fpm-alpine-v2
@@ -255,7 +255,7 @@ COPY s6-services/ /etc/services.d/
 docker run --rm kingpin/php-docker:8.3-cli-alpine ping -c 3 db-host
 ```
 
-2. **Verify database host:**
+1. **Verify database host:**
 ```yaml
 # Use service name in docker-compose
 services:
@@ -266,7 +266,7 @@ services:
     image: mysql:8
 ```
 
-3. **Check database is ready:**
+1. **Check database is ready:**
 ```yaml
 services:
   php:

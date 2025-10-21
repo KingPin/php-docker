@@ -65,7 +65,7 @@ The following environment variables can be overridden when running containers:
 | `PHP_OPCACHE_MAX_ACCELERATED_FILES` | `10000` | OPCache maximum number of files |
 | `PHP_OPCACHE_REVALIDATE_FREQ` | `0` | How often to check script timestamps |
 
-### Example usage:
+### Example usage
 
 ```bash
 docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-docker:8.3-fpm-alpine

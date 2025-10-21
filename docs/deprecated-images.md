@@ -41,7 +41,7 @@ This document lists PHP versions that are **no longer actively built** but remai
 **Last Build**: January 2025  
 **Reason**: Focus maintenance on PHP 8.2+ for better resource allocation
 
-#### Available Tags (Legacy)
+#### Available Tags
 
 **Alpine-based:**
 - `8.1-cli-alpine`
