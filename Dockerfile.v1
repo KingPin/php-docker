@@ -28,23 +28,23 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
 RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
         chmod +x /usr/local/bin/install-php-extensions && \
-        install-php-extensions amqp bcmath bz2 calendar ctype exif intl imap json mbstring ldap mcrypt memcached mongodb mysqli \
-          opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer
+        install-php-extensions amqp bcmath bz2 calendar ctype exif intl imagick imap json mbstring ldap mcrypt memcached mongodb \
+         mysqli opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer
 
 # Enable Apache rewrite mod, if applicable
 RUN if command -v a2enmod; then a2enmod rewrite; fi
 
-# Add mcrypt and imagick based on PHP version
-RUN case "$PHPVERSION" in \
-        7|8.0|8.1|8.2) \
-            install-php-extensions imagick; \
-            ;; \
-        8.3) \
-            install-php-extensions imagick/imagick@master; \
-            ;; \
-        *) \
-            ;; \
-    esac
+# # Add mcrypt and imagick based on PHP version
+# RUN case "$PHPVERSION" in \
+#         7|8.0|8.1|8.2) \
+#             install-php-extensions imagick; \
+#             ;; \
+#         8.3) \
+#             install-php-extensions imagick/imagick@master; \
+#             ;; \
+#         *) \
+#             ;; \
+#     esac
 
 # Disable AV1 only in armv7
 RUN case $(uname -m) in \
