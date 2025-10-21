@@ -1,0 +1,17 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://github.com/.*/pull/new/"
+    },
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://sumguy.com"
+    }
+  ],
+  "timeout": "20s",
+  "retryOn429": true,
+  "retryCount": 3,
+  "aliveStatusCodes": [200, 206]
+}
