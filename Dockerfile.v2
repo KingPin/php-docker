@@ -127,7 +127,7 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
             librabbitmq4 \
             libpng16-16t64 \
             libmagickwand-7.q16-10\
-            libc-client2007e \
+            # libc-client2007e \
             libsnappy1v5 \
             libpq5 \
             libsnmp40t64 \
