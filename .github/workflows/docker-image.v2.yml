@@ -41,7 +41,7 @@ jobs:
           echo '{
             "php-version": ["8.1", "8.2", "8.3", "8.4"],
             "php-type": ["cli", "fpm", "apache"],
-            "php-base-os": ["bookworm", "alpine"],
+            "php-base-os": ["trixie", "alpine"],
             "exclude": [
               {"php-type": "apache", "php-base-os": "alpine"}
             ]
@@ -135,8 +135,10 @@ jobs:
             # Regular version tags 
             ADDITIONAL_TAGS="${MAJOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }},${MINOR_VERSION}-${{ matrix.php-type }}-${{ matrix.php-base-os }}"
             
-            # Add bullseye-compatible tags for bookworm images
-            if [[ "${{ matrix.php-base-os }}" == "bookworm" ]]; then
+            # Add bookworm compatibility tags for trixie images (backward compatibility)
+            # Also add bullseye tags for transition compatibility
+            if [[ "${{ matrix.php-base-os }}" == "trixie" ]]; then
+              ADDITIONAL_TAGS="${ADDITIONAL_TAGS},${{ matrix.php-version }}-${{ matrix.php-type }}-bookworm,${MAJOR_VERSION}-${{ matrix.php-type }}-bookworm,${MINOR_VERSION}-${{ matrix.php-type }}-bookworm"
               ADDITIONAL_TAGS="${ADDITIONAL_TAGS},${{ matrix.php-version }}-${{ matrix.php-type }}-bullseye,${MAJOR_VERSION}-${{ matrix.php-type }}-bullseye,${MINOR_VERSION}-${{ matrix.php-type }}-bullseye"
             fi
             

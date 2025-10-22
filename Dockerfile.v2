@@ -11,8 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install dependencies based on the base OS with BuildKit cache mounts
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    if [ "$BASEOS" = "bookworm" ]; then \
-        echo 'deb http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list && \
+    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get -y upgrade && \
         apt-get install -y --no-install-recommends \
@@ -86,7 +85,7 @@ ARG TARGETARCH
 COPY --from=builder /usr/local/ /usr/local/
 
 # Install S6 Overlay init system
-RUN if [ "$BASEOS" = "bookworm" ]; then \
+RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             xz-utils \
@@ -122,26 +121,26 @@ RUN if [ "$BASEOS" = "bookworm" ]; then \
     fi
 
 # Install required system libraries based on OS
-RUN if [ "$BASEOS" = "bookworm" ]; then \
+RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             librabbitmq4 \
-            libpng16-16 \
-            libmagickwand-6.q16-6 \
+            libpng16-16t64 \
+            libmagickwand-6.q16-7t64 \
             libc-client2007e \
             libsnappy1v5 \
             libpq5 \
-            libsnmp40 \
+            libsnmp40t64 \
             libtidy5deb1 \
-            libvips42 \
+            libvips42t64 \
             libxslt1.1 \
             libyaml-0-2 \
             libzip4 \
-            libmemcached11 \
+            libmemcached11t64 \
             ghostscript \
             imagemagick \
             libwebp7 \
-            libavif15 \
+            libavif16t64 \
             libicu72 \
             libldap-2.5-0 \
             libuuid1 \
@@ -221,7 +220,7 @@ RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
     mkdir -p /var/run/s6 && \
     chmod -R 755 /var/run/s6 && \
     # Make sure scripts are executable and have correct line endings
-    if [ "$BASEOS" = "bookworm" ]; then \
+    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends dos2unix && \
         dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
