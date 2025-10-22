@@ -42,6 +42,35 @@ jobs:
         exclude:
           - php-type: apache
             php-base: alpine
+          # v2 uses trixie as the Debian base; bookworm retained for v1
+          - variant: v2
+            php-base: bookworm
+        include:
+          # v2 builds on trixie for Debian images
+          - variant: v2
+            php-version: '8.4'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: cli
+            php-base: trixie
     
     name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
     
@@ -244,6 +273,47 @@ jobs:
         exclude:
           - php-type: apache
             php-base: alpine
+          # v2 uses trixie as the Debian base; bookworm retained for v1
+          - variant: v2
+            php-base: bookworm
+        include:
+          # v2 builds on trixie for Debian images
+          - variant: v2
+            php-version: '8.4'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: apache
+            php-base: trixie
     
     name: publish-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
     
@@ -317,6 +387,30 @@ jobs:
             ${{ steps.vars.outputs.DOCKERHUB_TAG }}
             ${{ steps.vars.outputs.GHCR_TAG }}
             ${{ steps.vars.outputs.QUAY_TAG }}
+
+      - name: Create bookworm compatibility tag for v2 trixie images
+        if: matrix.variant == 'v2' && matrix.php-base == 'trixie'
+        run: |
+          echo "::group::Creating bookworm compatibility tags for trixie-built v2 image"
+          
+          # Replace 'trixie' with 'bookworm' in tag names to maintain backward compatibility
+          BOOKWORM_VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-bookworm"
+          
+          # Create manifest aliases pointing trixie-built images to bookworm tags
+          docker buildx imagetools create -t \
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${BOOKWORM_VERSION}-v2 \
+            ${{ steps.vars.outputs.DOCKERHUB_TAG }}
+          
+          docker buildx imagetools create -t \
+            ghcr.io/kingpin/php-docker:${BOOKWORM_VERSION}-v2 \
+            ${{ steps.vars.outputs.GHCR_TAG }}
+          
+          docker buildx imagetools create -t \
+            quay.io/kingpinx1/php-docker:${BOOKWORM_VERSION}-v2 \
+            ${{ steps.vars.outputs.QUAY_TAG }}
+          
+          echo "✅ Created bookworm compatibility tags pointing to trixie image"
+          echo "::endgroup::"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
