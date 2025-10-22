@@ -2,8 +2,12 @@ name: Docker CI (v1 + v2)
 
 on:
   push:
+    # Only run full CI on pushes to main (publishes/metrics). Running on
+    # every branch push plus pull_request creates duplicate runs when a PR
+    # receives new commits because GitHub emits both push and pull_request
+    # events for the same push. Restrict push to main to avoid that.
     branches:
-      - '**'
+      - 'main'
     paths-ignore:
       - '**.md'
       - 'docs/**'
