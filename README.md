@@ -33,6 +33,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 The following environment variables can be overridden when running containers:
 
 ### Memory Settings
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PHP_MEMORY_LIMIT` | `256M` | Maximum memory a script can consume |
@@ -40,6 +41,7 @@ The following environment variables can be overridden when running containers:
 | `PHP_OPCACHE_INTERNED_STRINGS_BUFFER` | `16` | OPCache interned strings buffer |
 
 ### Upload Settings
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PHP_UPLOAD_MAX_FILESIZE` | `64M` | Maximum allowed size for uploaded files |
@@ -47,12 +49,14 @@ The following environment variables can be overridden when running containers:
 | `PHP_MAX_FILE_UPLOADS` | `20` | Maximum number of files allowed for upload |
 
 ### Execution Settings
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PHP_MAX_EXECUTION_TIME` | `300` | Maximum execution time of scripts (seconds) |
 | `PHP_MAX_INPUT_VARS` | `1000` | Maximum input variables allowed |
 
 ### Error Handling
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PHP_ERROR_REPORTING` | `E_ALL` | Error reporting level |
@@ -60,6 +64,7 @@ The following environment variables can be overridden when running containers:
 | `PHP_LOG_ERRORS` | `On` | Log errors to error log |
 
 ### Other Settings
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PHP_DATE_TIMEZONE` | `UTC` | Default timezone |

@@ -86,8 +86,8 @@ If you encounter issues:
    ```
 
 3. **Report the issue**:
-   - Open an issue: https://github.com/kingpin/php-docker/issues
-   - Include: PHP version, image tag, error logs, and reproduction steps
+- Open an issue: [Report an issue on GitHub](https://github.com/kingpin/php-docker/issues)
+- Include: PHP version, image tag, error logs, and reproduction steps
 
 ### FAQ
 
@@ -404,7 +404,7 @@ Compare:
 - Memory usage
 - CPU usage
 
-## Rollback Plan
+## Quick rollback
 
 If you encounter issues, rolling back is simple:
 
