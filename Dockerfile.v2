@@ -142,7 +142,7 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
             libwebp7 \
             libavif16t64 \
             libicu72 \
-            libldap-2.5-0 \
+            libldap2 \
             libuuid1 \
             libxpm4 && \
         rm -rf /var/lib/apt/lists/*; \
