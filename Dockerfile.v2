@@ -126,22 +126,22 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get install -y --no-install-recommends \
             librabbitmq4 \
             libpng16-16t64 \
-            libmagickwand-6.q16-7t64 \
+            libmagickwand-7.q16-10\
             libc-client2007e \
             libsnappy1v5 \
             libpq5 \
             libsnmp40t64 \
-            libtidy5deb1 \
+            libtidy58 \
             libvips42t64 \
             libxslt1.1 \
             libyaml-0-2 \
-            libzip4 \
+            libzip5 \
             libmemcached11t64 \
             ghostscript \
             imagemagick \
             libwebp7 \
-            libavif16t64 \
-            libicu72 \
+            libavif16 \
+            libicu76 \
             libldap2 \
             libuuid1 \
             libxpm4 && \
