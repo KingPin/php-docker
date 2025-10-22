@@ -19,12 +19,14 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
 - **Multiple PHP Versions**: PHP 8.2, 8.3, and 8.4 (actively built); PHP 7.x, 8.0, and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
-- **Base OS Options**: Alpine (lightweight) and Debian (Bookworm/Bullseye)
+- **Base OS Options**: Alpine (lightweight) and Debian (v1: Bookworm, v2: Trixie with Bookworm-compatible tags)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
 - **Latest Composer**: Always ships with the latest Composer version
 - **Image Processing Tools**: Includes ImageMagick, GD, and various image optimization utilities
 - **Apache Mods**: Includes Apache rewrite module (for Apache variants)
 - **v2: s6-overlay init**: Proper PID 1 and service supervision for reliable multi-process containers
+
+> **ℹ️ Base OS Update (v2 only)**: v2 Debian images now use **Debian Trixie** as the base OS (following upstream PHP official images). For backward compatibility, `:bookworm` tags continue to work and point to the same Trixie-built images. v1 images remain on Bookworm. [See migration notes](docs/migration.md#debian-trixie-migration-v2-only) for details.
 
 ## Environment Variables
 
@@ -137,7 +139,7 @@ We maintain **two image variants** to support both existing users and modern use
 
 ### v2 (Modern) - Tags with `-v2` suffix
 
-**Purpose:** Modernized image with s6-overlay for proper init and service supervision.
+**Purpose:** Modernized image with s6-overlay for proper init and service supervision, built on latest Debian Trixie.
 
 **Key Characteristics:**
 
@@ -145,6 +147,7 @@ We maintain **two image variants** to support both existing users and modern use
 - Proper signal handling and zombie process reaping
 - Service supervision and restart policies
 - BuildKit-enabled for better build performance and caching
+- Built on Debian Trixie (`:trixie` tags) with `:bookworm` compatibility aliases
 
 **Pros:**
 

@@ -1,6 +1,115 @@
-# Migration Guide: v1 to v2
+# Migration Guide
 
-This guide helps you migrate from v1 (legacy) to v2 (modern) PHP Docker images.
+This guide helps you migrate between different versions of php-docker images.
+
+## Debian Trixie Migration (v2 only)
+
+**Effective Date:** October 2025  
+**Affects:** v2 Debian images only (v1 remains on Bookworm)
+
+### What Changed
+
+v2 Debian-based images have migrated from **Debian Bookworm** to **Debian Trixie** to align with upstream PHP official images and provide access to newer system packages.
+
+**Important:** For backward compatibility, `:bookworm` tags continue to work and now point to Trixie-built images. The same image digest is served whether you pull `:trixie` or `:bookworm` tags.
+
+### Tag Mapping
+
+All v2 Debian images now use Trixie as the base, with multiple compatible tags:
+
+```bash
+# These all reference the SAME trixie-built image:
+kingpin/php-docker:8.3-fpm-trixie-v2      # Explicit trixie tag
+kingpin/php-docker:8.3-fpm-bookworm-v2    # Backward-compatible alias
+kingpin/php-docker:8.3-fpm-bullseye-v2    # Legacy compatibility alias
+```
+
+### Why This Change?
+
+1. **Upstream Alignment**: PHP official images moved to Trixie
+2. **Newer Packages**: Access to latest system libraries and security updates
+3. **Future-Proofing**: Trixie will become the next Debian stable release
+4. **Zero Disruption**: Bookworm tags work transparently
+
+### Do I Need to Change Anything?
+
+**Short answer: No, in most cases.**
+
+If you're currently using:
+- `kingpin/php-docker:8.x-type-bookworm-v2` → **No action required**. You'll automatically get Trixie-built images.
+- `kingpin/php-docker:8.x-type-alpine-v2` → **No change**. Alpine images are unaffected.
+- v1 images (without `-v2`) → **No change**. v1 remains on Bookworm.
+
+### When to Review Your Setup
+
+✅ **Review if you:**
+- Compile native extensions or link against system libraries in your application
+- Have strict compliance requirements for a specific Debian version
+- Use host-mounted volumes with binaries that depend on glibc versions
+- Pin specific package versions via `apt-get install` in your Dockerfile layers
+
+✅ **Testing checklist:**
+1. Verify PHP version: `docker run --rm IMAGE php -v`
+2. Check extensions load: `docker run --rm IMAGE php -m`
+3. Test your application's core functionality
+4. Run your test suite if available
+5. Check for any compiled extensions (e.g., custom C extensions)
+
+### Library Changes in Trixie
+
+Key system library updates (time64 transition):
+
+| Library | Bookworm | Trixie |
+|---------|----------|--------|
+| libpng | `libpng16-16` | `libpng16-16t64` |
+| libmagickwand | `libmagickwand-6.q16-6` | `libmagickwand-6.q16-7t64` |
+| libvips | `libvips42` | `libvips42t64` |
+| libavif | `libavif15` | `libavif16t64` |
+| libmemcached | `libmemcached11` | `libmemcached11t64` |
+
+> **Note:** The `t64` suffix indicates [time64](https://wiki.debian.org/ReleaseGoals/64bit-time) support for 32-bit architectures. This does not affect x86_64 or arm64 users.
+
+### Rollback Plan
+
+If you encounter issues:
+
+1. **Pin to a legacy Bookworm digest** (if you have one saved):
+   ```bash
+   # Use a specific digest from before the migration
+   docker pull kingpin/php-docker@sha256:abc123...
+   ```
+
+2. **Use v1 images** (still on Bookworm):
+   ```bash
+   # v1 images remain on Debian Bookworm
+   docker pull kingpin/php-docker:8.3-fpm-bookworm
+   ```
+
+3. **Report the issue**:
+   - Open an issue: https://github.com/kingpin/php-docker/issues
+   - Include: PHP version, image tag, error logs, and reproduction steps
+
+### FAQ
+
+**Q: Will my existing containers break?**  
+A: No. Existing running containers continue unchanged. New pulls get Trixie-built images.
+
+**Q: Can I explicitly use Bookworm-built images?**  
+A: Use v1 images (without `-v2` suffix), which remain on Bookworm.
+
+**Q: What about Alpine images?**  
+A: Alpine images are completely unaffected by this change.
+
+**Q: Will Trixie images be larger?**  
+A: Image sizes are comparable. CI tests show negligible differences (<5%).
+
+**Q: Is this breaking my compliance requirements?**  
+A: If you require certified Bookworm images, use v1. v2 is built on Trixie going forward.
+
+**Q: When will v1 move to Trixie?**  
+A: No current plans. v1 remains on Bookworm for maximum stability and compatibility.
+
+---
 
 > **ℹ️ Note on Deprecated Versions**: PHP 7.x and 8.1 are no longer actively built. If you're using these versions, please also review the [deprecated images guide](deprecated-images.md) for upgrade paths to PHP 8.2 or 8.3.
 
