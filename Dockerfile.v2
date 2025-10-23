@@ -22,10 +22,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         if [ "$BASEOS" = "trixie" ]; then \
             apt-get install -y --no-install-recommends \
                 libmemcached-dev libmemcachedutil2t64 \
-                libmagickwand-dev libmagickcore-6.q16-7t64 \
+                libmagickwand-dev libmagickcore-7.q16-10 \
                 libvips-dev libvips42t64 \
                 libpng-dev libpng16-16t64 \
-                libavif-dev libavif16t64 \
+                libavif-dev libavif16 \
                 libsnmp-dev libsnmp40t64; \
         else \
             apt-get install -y --no-install-recommends \
