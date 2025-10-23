@@ -18,6 +18,24 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
             curl git zip unzip ghostscript imagemagick \
             optipng gifsicle pngcrush jpegoptim \
             libjpeg-turbo-progs pngquant webp && \
+        # Pre-install dev packages for extensions (Trixie uses t64 variants)\
+        if [ "$BASEOS" = "trixie" ]; then \
+            apt-get install -y --no-install-recommends \
+                libmemcached-dev libmemcachedutil2t64 \
+                libmagickwand-dev libmagickcore-6.q16-7t64 \
+                libvips-dev libvips42t64 \
+                libpng-dev libpng16-16t64 \
+                libavif-dev libavif16t64 \
+                libsnmp-dev libsnmp40t64; \
+        else \
+            apt-get install -y --no-install-recommends \
+                libmemcached-dev libmemcachedutil2 \
+                libmagickwand-dev libmagickcore-6.q16-6 \
+                libvips-dev libvips42 \
+                libpng-dev libpng16-16 \
+                libavif-dev libavif15 \
+                libsnmp-dev libsnmp40; \
+        fi && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
