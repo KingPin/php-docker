@@ -13,11 +13,12 @@ show_usage() {
     echo ""
     echo "Arguments:"
     echo "  v1|v2|both  - Which Dockerfile variant(s) to build"
-    echo "  <tag>       - Base tag (e.g., 8.3-fpm-alpine or 8.1-cli-bookworm)"
+    echo "  <tag>       - Base tag (e.g., 8.3-fpm-alpine or 8.1-cli-bookworm or 8.2-fpm-trixie)"
     echo ""
     echo "Examples:"
     echo "  $0 v1 8.3-fpm-alpine           # Builds ${IMAGE_NAME}:8.3-fpm-alpine"
     echo "  $0 v2 8.3-fpm-alpine           # Builds ${IMAGE_NAME}:8.3-fpm-alpine-v2"
+    echo "  $0 v2 8.2-fpm-trixie           # Builds ${IMAGE_NAME}:8.2-fpm-trixie-v2"
     echo "  $0 both 8.3-fpm-alpine         # Builds both variants"
     exit 1
 }
@@ -31,8 +32,8 @@ parse_tag() {
     # Extract variant (fpm or cli)
     local variant=$(echo "$tag" | grep -oE '(fpm|cli)' || echo "fpm")
     
-    # Extract base OS (alpine, bookworm, bullseye)
-    local baseos=$(echo "$tag" | grep -oE '(alpine|bookworm|bullseye)' || echo "alpine")
+    # Extract base OS (alpine, trixie, bookworm, bullseye)
+    local baseos=$(echo "$tag" | grep -oE '(alpine|trixie|bookworm|bullseye)' || echo "alpine")
     
     # Construct VERSION arg for FROM php:${VERSION}
     local version="${php_version}-${variant}-${baseos}"
