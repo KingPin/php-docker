@@ -10,7 +10,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies based on the base OS with BuildKit cache mounts
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get -y upgrade && \
