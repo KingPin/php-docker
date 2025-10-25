@@ -161,12 +161,10 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
 
 # Install required system libraries based on OS
 RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        apt-get update && \
         apt-get install -y --no-install-recommends \
             librabbitmq4 \
             libpng16-16t64 \
-            libmagickwand-7.q16-10\
-            # libc-client2007e \
+            libmagickwand-7.q16-10 \
             libsnappy1v5 \
             libpq5 \
             libsnmp40t64 \
@@ -260,7 +258,6 @@ RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
     chmod -R 755 /var/run/s6 && \
     # Make sure scripts are executable and have correct line endings
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        apt-get update && \
         apt-get install -y --no-install-recommends dos2unix && \
         dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
         rm -rf /var/lib/apt/lists/*; \
