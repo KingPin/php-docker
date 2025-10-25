@@ -119,6 +119,24 @@ FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG BASEOS
 ARG S6_OVERLAY_VERSION=3.2.0.2
 ARG TARGETARCH
+ARG PHPVERSION
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
+# OCI standard labels
+LABEL org.opencontainers.image.title="php-docker" \
+      org.opencontainers.image.description="PHP runtime with s6-overlay and curated extensions" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/KingPin/php-docker" \
+      org.opencontainers.image.licenses="MIT"
+
+# Custom project labels
+LABEL com.sumguy.php-docker.php.version="${PHPVERSION}" \
+      com.sumguy.php-docker.os.base="${BASEOS}" \
+      com.sumguy.php-docker.s6_overlay_version="${S6_OVERLAY_VERSION}"
 
 # Copy installed extensions and configurations from builder
 COPY --from=builder /usr/local/ /usr/local/
