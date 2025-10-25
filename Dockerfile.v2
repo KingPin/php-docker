@@ -286,4 +286,4 @@ RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
     fi
 
 ENTRYPOINT ["/init"]
-CMD ["php", "-a"]
+CMD []

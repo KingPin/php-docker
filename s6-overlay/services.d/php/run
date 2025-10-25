@@ -3,8 +3,16 @@
 
 # This script determines how to start the PHP service based on the image type
 
-# Detect PHP type from container environment or image tag
-PHP_TYPE=${PHP_TYPE:-$(php -r 'echo (php_sapi_name() === "cli" ? "cli" : (php_sapi_name() === "fpm" ? "fpm" : "apache"));')}
+# Detect PHP type by checking for binaries (more reliable than SAPI detection)
+if [ -z "${PHP_TYPE}" ]; then
+    if command -v php-fpm >/dev/null 2>&1; then
+        PHP_TYPE="fpm"
+    elif command -v apache2-foreground >/dev/null 2>&1 || command -v apache2 >/dev/null 2>&1; then
+        PHP_TYPE="apache"
+    else
+        PHP_TYPE="cli"
+    fi
+fi
 
 echo "Starting PHP service in ${PHP_TYPE} mode..."
 
@@ -17,13 +25,14 @@ case "$PHP_TYPE" in
     ;;
     
   "fpm")
-    # Start PHP-FPM with appropriate user
+    # Start PHP-FPM in foreground mode
+    # Note: php-fpm master runs as root and drops privileges via pool config
     echo "Starting PHP-FPM..."
-    exec s6-setuidgid appuser php-fpm
+    exec php-fpm -F
     ;;
     
   "apache")
-    # Start Apache with appropriate user
+    # Start Apache in foreground mode
     echo "Starting Apache..."
     exec apache2-foreground
     ;;
