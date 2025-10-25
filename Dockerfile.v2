@@ -218,37 +218,34 @@ ENV PHP_MEMORY_LIMIT=256M \
     PHP_DATE_TIMEZONE=UTC \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
-# Create non-root user for better security
+# Create non-root user, directories, and set permissions in a single layer
 RUN if [ "$BASEOS" != "alpine" ]; then \
       groupadd --gid 1000 appuser && \
       useradd --uid 1000 --gid 1000 -m appuser; \
     else \
       addgroup -g 1000 -S appuser && \
       adduser -u 1000 -S appuser -G appuser; \
-    fi
-
-# Set working directory and permissions
-WORKDIR /var/www/html
-RUN mkdir -p /var/www/html && \
+    fi && \
+    # Create all required directories
+    mkdir -p /var/www/html \
+             /usr/local/etc/php/conf.d \
+             /etc/cont-init.d \
+             /etc/services.d/php \
+             /var/run/s6 && \
+    # Set ownership and permissions
     chown -R appuser:appuser /var/www/html && \
-    chmod -R 755 /var/www/html && \
-    mkdir -p /usr/local/etc/php/conf.d && \
-    chmod -R 755 /usr/local/etc/php/conf.d
+    chmod -R 755 /var/www/html \
+                 /usr/local/etc/php/conf.d \
+                 /var/run/s6
 
-# Create S6 directory structure
-RUN mkdir -p \
-    /etc/cont-init.d \
-    /etc/services.d/php
+WORKDIR /var/www/html
 
 # Copy S6 configuration files
 COPY s6-overlay/cont-init.d/ /etc/cont-init.d/
 COPY s6-overlay/services.d/ /etc/services.d/
 
-# Set permissions for S6 scripts and ensure they have correct line endings
+# Set permissions for S6 scripts and convert line endings
 RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
-    mkdir -p /var/run/s6 && \
-    chmod -R 755 /var/run/s6 && \
-    # Convert CRLF to LF line endings using sed (works on all platforms)
     find /etc/cont-init.d /etc/services.d -type f -exec sed -i 's/\r$//' {} +
 
 ENTRYPOINT ["/init"]
