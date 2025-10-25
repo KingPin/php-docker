@@ -1,128 +1,16 @@
 ARG VERSION=8.3-cli-alpine
 
-# First stage: builder
-FROM public.ecr.aws/docker/library/php:${VERSION} AS builder
-ARG PHPVERSION
-ARG BASEOS
-
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install dependencies based on the base OS with BuildKit cache mounts
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        apt-get update && \
-        apt-get -y upgrade && \
-        apt-get install -y --no-install-recommends \
-            curl git zip unzip ghostscript imagemagick \
-            optipng gifsicle pngcrush jpegoptim \
-            libjpeg-turbo-progs pngquant webp && \
-        # Pre-install dev packages for extensions (Trixie uses t64 variants)\
-        if [ "$BASEOS" = "trixie" ]; then \
-            apt-get install -y --no-install-recommends \
-                libmemcached-dev libmemcachedutil2t64 \
-                libmagickwand-dev libmagickcore-7.q16-10 \
-                libvips-dev libvips42t64 \
-                libpng-dev libpng16-16t64 \
-                libavif-dev libavif16 \
-                libsnmp-dev libsnmp40t64 \
-                librabbitmq-dev \
-                libpq-dev \
-                libssl-dev \
-                libzip-dev \
-                libbz2-dev \
-                libicu-dev \
-                libldap2-dev \
-                libtidy-dev \
-                libxslt1-dev \
-                libyaml-dev \
-                uuid-dev \
-                libzstd-dev \
-                equivs && \
-            echo 'Package: libmemcachedutil2' > /tmp/libmemcachedutil2.control && \
-            echo 'Version: 999.0' >> /tmp/libmemcachedutil2.control && \
-            echo 'Architecture: all' >> /tmp/libmemcachedutil2.control && \
-            echo 'Maintainer: nobody' >> /tmp/libmemcachedutil2.control && \
-            echo 'Description: Dummy package for t64 transition' >> /tmp/libmemcachedutil2.control && \
-            echo 'Provides: libmemcachedutil2' >> /tmp/libmemcachedutil2.control && \
-            equivs-build /tmp/libmemcachedutil2.control && \
-            dpkg -i libmemcachedutil2_999.0_all.deb && \
-            rm /tmp/libmemcachedutil2.control libmemcachedutil2_999.0_all.deb; \
-        else \
-            apt-get install -y --no-install-recommends \
-                libmemcached-dev libmemcachedutil2 \
-                libmagickwand-dev libmagickcore-6.q16-6 \
-                libvips-dev libvips42 \
-                libpng-dev libpng16-16 \
-                libavif-dev libavif15 \
-                libsnmp-dev libsnmp40; \
-        fi && \
-        rm -rf /var/lib/apt/lists/*; \
-    elif [ "$BASEOS" = "alpine" ]; then \
-        apk update && \
-        apk add --no-cache \
-            curl git zip unzip ghostscript imagemagick \
-            optipng gifsicle pngcrush jpegoptim \
-            libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools; \
-    fi
-
-# Download PHP extension installer
-RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
-        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
-    chmod +x /usr/local/bin/install-php-extensions
-
-# Install PHP extensions grouped by category
-RUN install-php-extensions \
-    # Web development extensions
-    json mysqli pdo_mysql pdo_pgsql pgsql soap sockets \
-    # Performance & caching extensions
-    opcache redis memcached zstd \
-    # File operation extensions
-    zip bz2 \
-    # Utility extensions
-    amqp bcmath calendar ctype exif intl imagick imap ldap mbstring mcrypt \
-    mongodb snmp tidy timezonedb uuid vips xsl yaml \
-    # Package manager
-    @composer
-
-# Enable Apache rewrite mod if applicable
-RUN if command -v a2enmod; then \
-      a2enmod rewrite headers; \
-    fi
-
-# # Add mcrypt based on PHP version
-# RUN case "$PHPVERSION" in \
-#         8.0|8.1|8.2|8.3) \
-#             install-php-extensions mcrypt; \
-#             ;; \
-#         8.4) \
-#             ;; \
-#         *) \
-#             ;; \
-#     esac
-
-# Install GD with architecture-specific configuration
-RUN case $(uname -m) in \
-        x86_64|aarch64) \
-            install-php-extensions gd; \
-            ;; \
-        armv7l) \
-            IPE_GD_WITHOUTAVIF=1 install-php-extensions gd; \
-            ;; \
-        *) \
-            install-php-extensions gd; \
-            ;; \
-    esac
-
-# Second stage: production
 FROM public.ecr.aws/docker/library/php:${VERSION}
+ARG PHPVERSION
 ARG BASEOS
 ARG S6_OVERLAY_VERSION=3.2.1.0
 ARG TARGETARCH
-ARG PHPVERSION
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
 
 # OCI standard labels
 LABEL org.opencontainers.image.title="php-docker" \
@@ -138,32 +26,122 @@ LABEL com.sumguy.php-docker.php.version="${PHPVERSION}" \
       com.sumguy.php-docker.os.base="${BASEOS}" \
       com.sumguy.php-docker.s6_overlay_version="${S6_OVERLAY_VERSION}"
 
-# Copy installed extensions and configurations from builder
-COPY --from=builder /usr/local/ /usr/local/
-
-# Install S6 Overlay init system
-RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
+# Install build dependencies, PHP extensions, runtime libraries, and s6-overlay
+# Then clean up build-only packages in a single layer to minimize image size
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
+        apt-get -y upgrade && \
+        # Install build tools, dev packages, and runtime libraries together
         apt-get install -y --no-install-recommends \
-            xz-utils \
-            ca-certificates \
-            wget && \
-        case "${TARGETARCH}" in \
-            "amd64") S6_ARCH="x86_64" ;; \
-            "arm64") S6_ARCH="aarch64" ;; \
-            "arm") S6_ARCH="armhf" ;; \
-            *) S6_ARCH="x86_64" ;; \
-        esac && \
-        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
-        tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
-        tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
-        rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
+            build-essential \
+            curl git zip unzip wget ca-certificates xz-utils \
+            ghostscript imagemagick optipng gifsicle pngcrush jpegoptim \
+            libjpeg-turbo-progs pngquant webp && \
+        # Install dev + runtime packages for extensions (Trixie uses t64 variants)
+        if [ "$BASEOS" = "trixie" ]; then \
+            apt-get install -y --no-install-recommends \
+                libmemcached-dev libmemcachedutil2t64 libmemcached11t64 \
+                libmagickwand-dev libmagickcore-7.q16-10 libmagickwand-7.q16-10 \
+                libvips-dev libvips42t64 \
+                libpng-dev libpng16-16t64 \
+                libavif-dev libavif16 \
+                libsnmp-dev libsnmp40t64 \
+                librabbitmq-dev librabbitmq4 \
+                libpq-dev libpq5 \
+                libssl-dev \
+                libzip-dev libzip5 \
+                libbz2-dev \
+                libicu-dev libicu76 \
+                libldap2-dev libldap2 \
+                libtidy-dev libtidy58 \
+                libxslt1-dev libxslt1.1 \
+                libyaml-dev libyaml-0-2 \
+                uuid-dev libuuid1 \
+                libzstd-dev \
+                libsnappy1v5 \
+                libwebp7 \
+                libxpm4 \
+                equivs && \
+            echo 'Package: libmemcachedutil2' > /tmp/libmemcachedutil2.control && \
+            echo 'Version: 999.0' >> /tmp/libmemcachedutil2.control && \
+            echo 'Architecture: all' >> /tmp/libmemcachedutil2.control && \
+            echo 'Maintainer: nobody' >> /tmp/libmemcachedutil2.control && \
+            echo 'Description: Dummy package for t64 transition' >> /tmp/libmemcachedutil2.control && \
+            echo 'Provides: libmemcachedutil2' >> /tmp/libmemcachedutil2.control && \
+            equivs-build /tmp/libmemcachedutil2.control && \
+            dpkg -i libmemcachedutil2_999.0_all.deb && \
+            rm /tmp/libmemcachedutil2.control libmemcachedutil2_999.0_all.deb; \
+        else \
+            apt-get install -y --no-install-recommends \
+                libmemcached-dev libmemcachedutil2 libmemcached11 \
+                libmagickwand-dev libmagickcore-6.q16-6 libmagickwand-6.q16-6 \
+                libvips-dev libvips42 \
+                libpng-dev libpng16-16 \
+                libavif-dev libavif15 \
+                libsnmp-dev libsnmp40 \
+                librabbitmq-dev librabbitmq4 \
+                libpq-dev libpq5 \
+                libssl-dev \
+                libzip-dev libzip4 \
+                libbz2-dev \
+                libicu-dev \
+                libldap2-dev libldap-2.5-0 \
+                libtidy-dev libtidy5deb1 \
+                libxslt1-dev libxslt1.1 \
+                libyaml-dev libyaml-0-2 \
+                uuid-dev libuuid1 \
+                libzstd-dev; \
+        fi; \
     elif [ "$BASEOS" = "alpine" ]; then \
+        apk update && \
         apk add --no-cache \
-            xz \
-            ca-certificates \
-            wget && \
+            build-base \
+            curl git zip unzip wget ca-certificates xz \
+            ghostscript imagemagick optipng gifsicle pngcrush jpegoptim \
+            libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools \
+            rabbitmq-c rabbitmq-c-dev \
+            libpng libpng-dev \
+            imagemagick \
+            imagemagick-dev \
+            c-client \
+            snappy snappy-dev \
+            libpq postgresql-dev \
+            net-snmp-libs net-snmp-dev \
+            tidyhtml-libs tidyhtml-dev \
+            vips vips-dev \
+            libxslt libxslt-dev \
+            yaml yaml-dev \
+            libzip libzip-dev \
+            libmemcached libmemcached-dev \
+            libavif libavif-dev \
+            icu-libs icu-dev \
+            openldap openldap-dev \
+            libuuid util-linux-dev \
+            libxpm libxpm-dev; \
+    fi && \
+    # Download and install PHP extension installer
+    curl -sSLf -o /usr/local/bin/install-php-extensions \
+        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
+    chmod +x /usr/local/bin/install-php-extensions && \
+    # Install PHP extensions
+    install-php-extensions \
+        json mysqli pdo_mysql pdo_pgsql pgsql soap sockets \
+        opcache redis memcached zstd \
+        zip bz2 \
+        amqp bcmath calendar ctype exif intl imagick imap ldap mbstring mcrypt \
+        mongodb snmp tidy timezonedb uuid vips xsl yaml \
+        @composer && \
+    # Enable Apache modules if applicable
+    if command -v a2enmod; then a2enmod rewrite headers; fi && \
+    # Install GD with architecture-specific configuration
+    case $(uname -m) in \
+        x86_64|aarch64) install-php-extensions gd ;; \
+        armv7l) IPE_GD_WITHOUTAVIF=1 install-php-extensions gd ;; \
+        *) install-php-extensions gd ;; \
+    esac && \
+    # Install S6 Overlay
+    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ] || [ "$BASEOS" = "alpine" ]; then \
         case "${TARGETARCH}" in \
             "amd64") S6_ARCH="x86_64" ;; \
             "arm64") S6_ARCH="aarch64" ;; \
@@ -175,56 +153,55 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
         tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
         rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
-    fi
-
-# Install required system libraries based on OS
-RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        apt-get install -y --no-install-recommends \
-            dos2unix \
-            librabbitmq4 \
-            libpng16-16t64 \
-            libmagickwand-7.q16-10 \
-            libsnappy1v5 \
-            libpq5 \
-            libsnmp40t64 \
-            libtidy58 \
-            libvips42t64 \
-            libxslt1.1 \
-            libyaml-0-2 \
-            libzip5 \
-            libmemcached11t64 \
-            ghostscript \
-            imagemagick \
-            libwebp7 \
-            libavif16 \
-            libicu76 \
-            libldap2 \
-            libuuid1 \
-            libxpm4 && \
+    fi && \
+    # Clean up build-only packages to reduce image size
+    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
+        apt-get purge -y --auto-remove \
+            build-essential \
+            libmemcached-dev \
+            libmagickwand-dev \
+            libvips-dev \
+            libpng-dev \
+            libavif-dev \
+            libsnmp-dev \
+            librabbitmq-dev \
+            libpq-dev \
+            libssl-dev \
+            libzip-dev \
+            libbz2-dev \
+            libicu-dev \
+            libldap2-dev \
+            libtidy-dev \
+            libxslt1-dev \
+            libyaml-dev \
+            uuid-dev \
+            libzstd-dev \
+            equivs \
+            wget \
+            xz-utils && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
-        apk add --no-cache \
-            dos2unix \
-            rabbitmq-c \
-            libpng \
-            imagemagick \
-            c-client \
-            snappy \
-            libpq \
-            net-snmp-libs \
-            tidyhtml-libs \
-            vips \
-            libxslt \
-            yaml \
-            libzip \
-            libmemcached \
-            ghostscript \
-            libwebp \
-            libavif \
-            icu-libs \
-            openldap \
-            libuuid \
-            libxpm; \
+        apk del --no-cache \
+            build-base \
+            rabbitmq-c-dev \
+            libpng-dev \
+            imagemagick-dev \
+            snappy-dev \
+            postgresql-dev \
+            net-snmp-dev \
+            tidyhtml-dev \
+            vips-dev \
+            libxslt-dev \
+            yaml-dev \
+            libzip-dev \
+            libmemcached-dev \
+            libavif-dev \
+            icu-dev \
+            openldap-dev \
+            util-linux-dev \
+            libxpm-dev \
+            wget \
+            xz; \
     fi
 
 # Set useful PHP environment variables with defaults
@@ -273,17 +250,10 @@ COPY s6-overlay/services.d/ /etc/services.d/
 
 # Set permissions for S6 scripts and ensure they have correct line endings
 RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
-    # Ensure S6 directories have proper permissions
     mkdir -p /var/run/s6 && \
     chmod -R 755 /var/run/s6 && \
-    # Make sure scripts are executable and have correct line endings
-    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
-        rm -rf /var/lib/apt/lists/*; \
-    elif [ "$BASEOS" = "alpine" ]; then \
-        dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
-        apk del --no-cache dos2unix; \
-    fi
+    # Convert CRLF to LF line endings using sed (works on all platforms)
+    find /etc/cont-init.d /etc/services.d -type f -exec sed -i 's/\r$//' {} +
 
 ENTRYPOINT ["/init"]
 CMD []
