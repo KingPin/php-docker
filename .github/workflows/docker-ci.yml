@@ -78,6 +78,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get latest s6-overlay version
+        id: s6-version
+        run: |
+          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
+          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
+
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -118,6 +125,7 @@ jobs:
             VERSION=${{ steps.vars.outputs.VERSION }}
             PHPVERSION=${{ matrix.php-version }}
             BASEOS=${{ matrix.php-base }}
+            S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }}
           tags: test-${{ steps.vars.outputs.TAG }}
 
       - name: Smoke tests - PHP version
@@ -321,6 +329,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get latest s6-overlay version
+        id: s6-version
+        run: |
+          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
+          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
+
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -383,6 +398,7 @@ jobs:
             VERSION=${{ steps.vars.outputs.VERSION }}
             PHPVERSION=${{ matrix.php-version }}
             BASEOS=${{ matrix.php-base }}
+            S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }}
           tags: |
             ${{ steps.vars.outputs.DOCKERHUB_TAG }}
             ${{ steps.vars.outputs.GHCR_TAG }}
