@@ -19,10 +19,8 @@ LABEL org.opencontainers.image.title="php-docker" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.source="https://github.com/KingPin/php-docker" \
-      org.opencontainers.image.licenses="MIT"
-
-# Custom project labels
-LABEL com.sumguy.php-docker.php.version="${PHPVERSION}" \
+      org.opencontainers.image.licenses="MIT" \
+      com.sumguy.php-docker.php.version="${PHPVERSION}" \
       com.sumguy.php-docker.os.base="${BASEOS}" \
       com.sumguy.php-docker.s6_overlay_version="${S6_OVERLAY_VERSION}"
 
@@ -140,20 +138,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         armv7l) IPE_GD_WITHOUTAVIF=1 install-php-extensions gd ;; \
         *) install-php-extensions gd ;; \
     esac && \
-    # Install S6 Overlay
-    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ] || [ "$BASEOS" = "alpine" ]; then \
-        case "${TARGETARCH}" in \
-            "amd64") S6_ARCH="x86_64" ;; \
-            "arm64") S6_ARCH="aarch64" ;; \
-            "arm") S6_ARCH="armhf" ;; \
-            *) S6_ARCH="x86_64" ;; \
-        esac && \
-        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-        wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
-        tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
-        tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
-        rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
-    fi && \
+    # Install S6 Overlay - map Docker platform to s6 architecture
+    case "${TARGETARCH}" in \
+        amd64) S6_ARCH="x86_64" ;; \
+        arm64) S6_ARCH="aarch64" ;; \
+        arm|armv7) S6_ARCH="armhf" ;; \
+        *) S6_ARCH="x86_64" ;; \
+    esac && \
+    wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+    wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+    tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
+    rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz && \
     # Clean up build-only packages to reduce image size
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get purge -y --auto-remove \
