@@ -117,7 +117,7 @@ RUN case $(uname -m) in \
 # Second stage: production
 FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG BASEOS
-ARG S6_OVERLAY_VERSION=3.2.0.2
+ARG S6_OVERLAY_VERSION=3.2.1.0
 ARG TARGETARCH
 ARG PHPVERSION
 ARG BUILD_DATE
@@ -180,6 +180,7 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
 # Install required system libraries based on OS
 RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get install -y --no-install-recommends \
+            dos2unix \
             librabbitmq4 \
             libpng16-16t64 \
             libmagickwand-7.q16-10 \
@@ -203,6 +204,7 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk add --no-cache \
+            dos2unix \
             rabbitmq-c \
             libpng \
             imagemagick \
@@ -276,11 +278,9 @@ RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
     chmod -R 755 /var/run/s6 && \
     # Make sure scripts are executable and have correct line endings
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        apt-get install -y --no-install-recommends dos2unix && \
         dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
-        apk add --no-cache dos2unix && \
         dos2unix /etc/cont-init.d/* /etc/services.d/php/* && \
         apk del --no-cache dos2unix; \
     fi
