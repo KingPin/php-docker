@@ -25,7 +25,29 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
                 libvips-dev libvips42t64 \
                 libpng-dev libpng16-16t64 \
                 libavif-dev libavif16 \
-                libsnmp-dev libsnmp40t64; \
+                libsnmp-dev libsnmp40t64 \
+                librabbitmq-dev \
+                libpq-dev \
+                libssl-dev \
+                libzip-dev \
+                libbz2-dev \
+                libicu-dev \
+                libldap2-dev \
+                libtidy-dev \
+                libxslt1-dev \
+                libyaml-dev \
+                uuid-dev \
+                libzstd-dev \
+                equivs && \
+            echo 'Package: libmemcachedutil2' > /tmp/libmemcachedutil2.control && \
+            echo 'Version: 999.0' >> /tmp/libmemcachedutil2.control && \
+            echo 'Architecture: all' >> /tmp/libmemcachedutil2.control && \
+            echo 'Maintainer: nobody' >> /tmp/libmemcachedutil2.control && \
+            echo 'Description: Dummy package for t64 transition' >> /tmp/libmemcachedutil2.control && \
+            echo 'Provides: libmemcachedutil2' >> /tmp/libmemcachedutil2.control && \
+            equivs-build /tmp/libmemcachedutil2.control && \
+            dpkg -i libmemcachedutil2_999.0_all.deb && \
+            rm /tmp/libmemcachedutil2.control libmemcachedutil2_999.0_all.deb; \
         else \
             apt-get install -y --no-install-recommends \
                 libmemcached-dev libmemcachedutil2 \
