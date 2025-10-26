@@ -154,6 +154,32 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz && \
     # Clean up build-only packages to reduce image size
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
+        # Mark runtime libraries to keep before purging dev packages
+        apt-mark manual \
+            libmemcached11t64 libmemcached11 \
+            libmagickcore-7.q16-10 libmagickwand-7.q16-10 libmagickcore-6.q16-6 libmagickwand-6.q16-6 \
+            libvips42t64 \
+            libvips42 \
+            libpng16-16t64 \
+            libpng16-16 \
+            libavif16 \
+            libavif15 \
+            libsnmp40t64 \
+            libsnmp40 \
+            librabbitmq4 \
+            libpq5 \
+            libzip5 libzip4 \
+            libicu76 \
+            libldap2 \
+            libldap-2.5-0 \
+            libtidy58 \
+            libtidy5deb1 \
+            libxslt1.1 \
+            libyaml-0-2 \
+            libuuid1 \
+            libsnappy1v5 \
+            libwebp7 \
+            libxpm4 2>/dev/null || true && \
         apt-get purge -y --auto-remove \
             build-essential \
             libmemcached-dev \
