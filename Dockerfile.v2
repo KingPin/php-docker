@@ -60,6 +60,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
                 libsnappy1v5 \
                 libwebp7 \
                 libxpm4 \
+                libxpm-dev \
                 equivs && \
             echo 'Package: libmemcachedutil2' > /tmp/libmemcachedutil2.control && \
             echo 'Version: 999.0' >> /tmp/libmemcachedutil2.control && \
@@ -89,7 +90,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
                 libxslt1-dev libxslt1.1 \
                 libyaml-dev libyaml-0-2 \
                 uuid-dev libuuid1 \
-                libzstd-dev; \
+                libzstd-dev \
+                libxpm-dev; \
         fi; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
@@ -172,6 +174,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
             libyaml-dev \
             uuid-dev \
             libzstd-dev \
+            libxpm-dev \
             equivs \
             wget \
             xz-utils && \
