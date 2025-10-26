@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
                 libsnmp-dev libsnmp40t64 \
                 librabbitmq-dev librabbitmq4 \
                 libpq-dev libpq5 \
-                libssl-dev \
+                libssl-dev libssl3t64 \
                 libzip-dev libzip5 \
                 libbz2-dev \
                 libicu-dev libicu76 \
@@ -70,7 +70,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
             echo 'Provides: libmemcachedutil2' >> /tmp/libmemcachedutil2.control && \
             equivs-build /tmp/libmemcachedutil2.control && \
             dpkg -i libmemcachedutil2_999.0_all.deb && \
-            rm /tmp/libmemcachedutil2.control libmemcachedutil2_999.0_all.deb; \
+            rm /tmp/libmemcachedutil2.control libmemcachedutil2_999.0_all.deb && \
+            echo 'Package: libssl3' > /tmp/libssl3.control && \
+            echo 'Version: 999.0' >> /tmp/libssl3.control && \
+            echo 'Architecture: all' >> /tmp/libssl3.control && \
+            echo 'Maintainer: nobody' >> /tmp/libssl3.control && \
+            echo 'Description: Dummy package for t64 transition - provides libssl3' >> /tmp/libssl3.control && \
+            echo 'Depends: libssl3t64' >> /tmp/libssl3.control && \
+            echo 'Provides: libssl3' >> /tmp/libssl3.control && \
+            equivs-build /tmp/libssl3.control && \
+            dpkg -i libssl3_999.0_all.deb && \
+            rm /tmp/libssl3.control libssl3_999.0_all.deb; \
         else \
             apt-get install -y --no-install-recommends \
                 libmemcached-dev libmemcachedutil2 libmemcached11 \
@@ -81,7 +91,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
                 libsnmp-dev libsnmp40 \
                 librabbitmq-dev librabbitmq4 \
                 libpq-dev libpq5 \
-                libssl-dev \
+                libssl-dev libssl3 \
                 libzip-dev libzip4 \
                 libbz2-dev \
                 libicu-dev \
@@ -155,31 +165,24 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Clean up build-only packages to reduce image size
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         # Mark runtime libraries to keep before purging dev packages
-        apt-mark manual \
-            libmemcached11t64 libmemcached11 \
+        # Use dpkg-query (more reliable in cross-compilation than dpkg -l | grep)
+        for pkg in libmemcached11t64 libmemcached11 \
             libmagickcore-7.q16-10 libmagickwand-7.q16-10 libmagickcore-6.q16-6 libmagickwand-6.q16-6 \
-            libvips42t64 \
-            libvips42 \
-            libpng16-16t64 \
-            libpng16-16 \
-            libavif16 \
-            libavif15 \
-            libsnmp40t64 \
-            libsnmp40 \
-            librabbitmq4 \
-            libpq5 \
+            libvips42t64 libvips42 \
+            libpng16-16t64 libpng16-16 \
+            libavif16 libavif15 \
+            libsnmp40t64 libsnmp40 \
+            librabbitmq4 libpq5 \
+            libssl3t64 libssl3 \
             libzip5 libzip4 \
             libicu76 \
-            libldap2 \
-            libldap-2.5-0 \
-            libtidy58 \
-            libtidy5deb1 \
-            libxslt1.1 \
-            libyaml-0-2 \
-            libuuid1 \
-            libsnappy1v5 \
-            libwebp7 \
-            libxpm4 2>/dev/null || true && \
+            libldap2 libldap-2.5-0 \
+            libtidy58 libtidy5deb1 \
+            libxslt1.1 libyaml-0-2 libuuid1 \
+            libsnappy1v5 libwebp7 libxpm4; do \
+            dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" && \
+                apt-mark manual "$pkg" 2>/dev/null || true; \
+        done && \
         apt-get purge -y --auto-remove \
             build-essential \
             libmemcached-dev \
