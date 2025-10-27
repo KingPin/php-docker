@@ -161,78 +161,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
     tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
     tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
-    rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz && \
-    # Clean up build-only packages to reduce image size
-    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
-        # Mark runtime libraries to keep before purging dev packages
-        # Use dpkg-query (more reliable in cross-compilation than dpkg -l | grep)
-        for pkg in libmemcached11t64 libmemcached11 \
-            libmagickcore-7.q16-10 libmagickwand-7.q16-10 libmagickcore-6.q16-6 libmagickwand-6.q16-6 \
-            libvips42t64 libvips42 \
-            libpng16-16t64 libpng16-16 \
-            libavif16 libavif15 \
-            libsnmp40t64 libsnmp40 \
-            librabbitmq4 libpq5 \
-            libssl3t64 libssl3 \
-            libzip5 libzip4 \
-            libicu76 \
-            libldap2 libldap-2.5-0 \
-            libtidy58 libtidy5deb1 \
-            libxslt1.1 libyaml-0-2 libuuid1 \
-            libsnappy1v5 libwebp7 libxpm4; do \
-            dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" && \
-                apt-mark manual "$pkg" 2>/dev/null || true; \
-        done && \
-        apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false -o APT::AutoRemove::SuggestsImportant=false \
-            build-essential \
-            libmemcached-dev \
-            libmagickwand-dev \
-            libvips-dev \
-            libpng-dev \
-            libavif-dev \
-            libsnmp-dev \
-            librabbitmq-dev \
-            libpq-dev \
-            libssl-dev \
-            libzip-dev \
-            libbz2-dev \
-            libicu-dev \
-            libldap2-dev \
-            libtidy-dev \
-            libxslt1-dev \
-            libyaml-dev \
-            uuid-dev \
-            libzstd-dev \
-            libxpm-dev \
-            equivs \
-            wget \
-            xz-utils 2>&1 || echo "Warning: Some packages could not be removed" && \
-        apt-get autoremove -y 2>&1 || true && \
-        apt-get clean && \
-        rm -rf /var/lib/apt/lists/*; \
-    elif [ "$BASEOS" = "alpine" ]; then \
-        apk del --no-cache \
-            build-base \
-            rabbitmq-c-dev \
-            libpng-dev \
-            imagemagick-dev \
-            snappy-dev \
-            postgresql-dev \
-            net-snmp-dev \
-            tidyhtml-dev \
-            vips-dev \
-            libxslt-dev \
-            yaml-dev \
-            libzip-dev \
-            libmemcached-dev \
-            libavif-dev \
-            icu-dev \
-            openldap-dev \
-            util-linux-dev \
-            libxpm-dev \
-            wget \
-            xz; \
-    fi
+    rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz
 
 # Set useful PHP environment variables with defaults
 ENV PHP_MEMORY_LIMIT=256M \
