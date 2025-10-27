@@ -160,7 +160,8 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
     wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
     tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
     tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
-    rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz
+    rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
+    true
 
 # Set useful PHP environment variables with defaults
 ENV PHP_MEMORY_LIMIT=256M \
