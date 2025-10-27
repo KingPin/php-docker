@@ -26,8 +26,7 @@ LABEL org.opencontainers.image.title="php-docker" \
 
 # Install build dependencies, PHP extensions, runtime libraries, and s6-overlay
 # Then clean up build-only packages in a single layer to minimize image size
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
+RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get -y upgrade && \
         # Install build tools, dev packages, and runtime libraries together
