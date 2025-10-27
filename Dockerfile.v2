@@ -3,7 +3,7 @@ ARG VERSION=8.3-cli-alpine
 FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG PHPVERSION
 ARG BASEOS
-ARG S6_OVERLAY_VERSION=3.2.1.0
+ARG S6_OVERLAY_VERSION=v3.2.1.0
 ARG TARGETARCH
 ARG BUILD_DATE
 ARG VCS_REF
@@ -157,8 +157,8 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         *) S6_ARCH="x86_64" ;; \
     esac && \
     echo "Downloading s6-overlay ${S6_OVERLAY_VERSION} for ${S6_ARCH}" && \
-    wget -O /tmp/s6-overlay-noarch.tar.xz https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-    wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+    wget -O /tmp/s6-overlay-noarch.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+    wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
     tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
     tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
