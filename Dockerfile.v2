@@ -183,7 +183,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
             dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" && \
                 apt-mark manual "$pkg" 2>/dev/null || true; \
         done && \
-        apt-get purge -y --auto-remove \
+        apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false -o APT::AutoRemove::SuggestsImportant=false \
             build-essential \
             libmemcached-dev \
             libmagickwand-dev \
@@ -206,7 +206,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
             libxpm-dev \
             equivs \
             wget \
-            xz-utils && \
+            xz-utils 2>&1 || echo "Warning: Some packages could not be removed" && \
+        apt-get autoremove -y 2>&1 || true && \
+        apt-get clean && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk del --no-cache \
