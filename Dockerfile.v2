@@ -156,12 +156,13 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         arm|armv7) S6_ARCH="armhf" ;; \
         *) S6_ARCH="x86_64" ;; \
     esac && \
-    wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-    wget -q https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
-    tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
-    tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
-    rm s6-overlay-noarch.tar.xz s6-overlay-${S6_ARCH}.tar.xz; \
-    true
+    echo "Downloading s6-overlay ${S6_OVERLAY_VERSION} for ${S6_ARCH}" && \
+    wget -O /tmp/s6-overlay-noarch.tar.xz https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+    wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
+    rm /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
+    test -f /init || (echo "ERROR: /init not found after s6-overlay installation" && exit 1)
 
 # Set useful PHP environment variables with defaults
 ENV PHP_MEMORY_LIMIT=256M \
