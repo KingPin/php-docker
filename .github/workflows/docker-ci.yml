@@ -400,6 +400,7 @@ jobs:
           file: ${{ steps.vars.outputs.DOCKERFILE }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          provenance: mode=max
           cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
           build-args: |
