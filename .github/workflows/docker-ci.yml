@@ -273,7 +273,8 @@ jobs:
         run: |
           echo "::notice::✅ Build and tests passed for ${{ matrix.variant }} - ${{ steps.vars.outputs.TAG }}"
 
-  publish:
+  # Per-architecture build and push jobs
+  publish-amd64:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
     # runs-on: ubuntu-latest
@@ -288,11 +289,9 @@ jobs:
         exclude:
           - php-type: apache
             php-base: alpine
-          # v2 uses trixie as the Debian base; bookworm retained for v1
           - variant: v2
             php-base: bookworm
         include:
-          # v2 builds on trixie for Debian images
           - variant: v2
             php-version: '8.4'
             php-type: fpm
@@ -330,7 +329,9 @@ jobs:
             php-type: apache
             php-base: trixie
     
-    name: publish-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    name: amd64-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     
     steps:
       - name: Checkout
@@ -386,42 +387,703 @@ jobs:
           
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
+          # Staging tags for per-arch builds (will be assembled into multi-arch manifest later)
+          STAGING_TAG="${VERSION}${TAG_SUFFIX}-amd64-staging"
+          
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
           echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "STAGING_TAG=${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_STAGING=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "GHCR_STAGING=ghcr.io/kingpin/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "QUAY_STAGING=quay.io/kingpinx1/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}-amd64" >> $GITHUB_OUTPUT
+
+      - name: Build and push amd64 image with retry
+        id: build
+        run: |
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::group::Build attempt $ATTEMPT of $MAX_ATTEMPTS"
+            
+            if docker buildx build \
+              --platform linux/amd64 \
+              --file ${{ steps.vars.outputs.DOCKERFILE }} \
+              --push \
+              --provenance mode=max \
+              --cache-from type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }} \
+              --cache-to type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }} \
+              --build-arg VERSION=${{ steps.vars.outputs.VERSION }} \
+              --build-arg PHPVERSION=${{ matrix.php-version }} \
+              --build-arg BASEOS=${{ matrix.php-base }} \
+              --build-arg S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }} \
+              --build-arg BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }} \
+              --build-arg VCS_REF=${{ github.sha }} \
+              --tag ${{ steps.vars.outputs.DOCKERHUB_STAGING }} \
+              --tag ${{ steps.vars.outputs.GHCR_STAGING }} \
+              --tag ${{ steps.vars.outputs.QUAY_STAGING }} \
+              --label com.sumguy.php-docker.php.variant=${{ matrix.php-type }} \
+              --label com.sumguy.php-docker.image.variant=${{ matrix.variant }} \
+              --label com.sumguy.php-docker.build_id=${{ github.run_id }} \
+              --label com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+              --label com.sumguy.php-docker.built_by=github-actions/docker-ci \
+              --metadata-file /tmp/metadata-amd64.json \
+              .; then
+              
+              SUCCESS=true
+              echo "✅ Build and push succeeded on attempt $ATTEMPT"
+              echo "::endgroup::"
+              break
+            else
+              echo "::warning::Build attempt $ATTEMPT failed"
+              echo "::endgroup::"
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                SLEEP_TIME=$((2 ** ATTEMPT))
+                echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
+                sleep $SLEEP_TIME
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "::error::All $MAX_ATTEMPTS build attempts failed"
+            exit 1
+          fi
+          
+          # Extract digest from metadata
+          DIGEST=$(jq -r '."containerimage.digest"' /tmp/metadata-amd64.json)
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "📋 Image digest: ${DIGEST}"
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: ${{ steps.vars.outputs.DOCKERHUB_STAGING }}
+          format: 'sarif'
+          severity: 'CRITICAL,HIGH'
+          output: 'trivy-results-amd64-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-amd64-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+
+  publish-arm64:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+    # runs-on: ubuntu-latest
+    runs-on: arc-s2-runner
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [v1, v2]
+        php-version: ['8.4', '8.3', '8.2']
+        php-type: [fpm, cli, apache]
+        php-base: [alpine, bookworm]
+        exclude:
+          - php-type: apache
+            php-base: alpine
+          - variant: v2
+            php-base: bookworm
+        include:
+          - variant: v2
+            php-version: '8.4'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: apache
+            php-base: trixie
+    
+    name: arm64-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest s6-overlay version
+        id: s6-version
+        run: |
+          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
+          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Set publish variables
+        id: vars
+        run: |
+          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
+          
+          if [ "${{ matrix.variant }}" = "v2" ]; then
+            TAG_SUFFIX="-v2"
+            DOCKERFILE="Dockerfile.v2"
+          else
+            TAG_SUFFIX=""
+            DOCKERFILE="Dockerfile.v1"
+          fi
+          
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Staging tags for per-arch builds
+          STAGING_TAG="${VERSION}${TAG_SUFFIX}-arm64-staging"
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "STAGING_TAG=${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_STAGING=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "GHCR_STAGING=ghcr.io/kingpin/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "QUAY_STAGING=quay.io/kingpinx1/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}-arm64" >> $GITHUB_OUTPUT
+
+      - name: Build and push arm64 image with retry
+        id: build
+        run: |
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::group::Build attempt $ATTEMPT of $MAX_ATTEMPTS"
+            
+            if docker buildx build \
+              --platform linux/arm64 \
+              --file ${{ steps.vars.outputs.DOCKERFILE }} \
+              --push \
+              --provenance mode=max \
+              --cache-from type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }} \
+              --cache-to type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }} \
+              --build-arg VERSION=${{ steps.vars.outputs.VERSION }} \
+              --build-arg PHPVERSION=${{ matrix.php-version }} \
+              --build-arg BASEOS=${{ matrix.php-base }} \
+              --build-arg S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }} \
+              --build-arg BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }} \
+              --build-arg VCS_REF=${{ github.sha }} \
+              --tag ${{ steps.vars.outputs.DOCKERHUB_STAGING }} \
+              --tag ${{ steps.vars.outputs.GHCR_STAGING }} \
+              --tag ${{ steps.vars.outputs.QUAY_STAGING }} \
+              --label com.sumguy.php-docker.php.variant=${{ matrix.php-type }} \
+              --label com.sumguy.php-docker.image.variant=${{ matrix.variant }} \
+              --label com.sumguy.php-docker.build_id=${{ github.run_id }} \
+              --label com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+              --label com.sumguy.php-docker.built_by=github-actions/docker-ci \
+              --metadata-file /tmp/metadata-arm64.json \
+              .; then
+              
+              SUCCESS=true
+              echo "✅ Build and push succeeded on attempt $ATTEMPT"
+              echo "::endgroup::"
+              break
+            else
+              echo "::warning::Build attempt $ATTEMPT failed"
+              echo "::endgroup::"
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                SLEEP_TIME=$((2 ** ATTEMPT))
+                echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
+                sleep $SLEEP_TIME
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "::error::All $MAX_ATTEMPTS build attempts failed"
+            exit 1
+          fi
+          
+          # Extract digest from metadata
+          DIGEST=$(jq -r '."containerimage.digest"' /tmp/metadata-arm64.json)
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "📋 Image digest: ${DIGEST}"
+
+  publish-armv7:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+    # runs-on: ubuntu-latest
+    runs-on: arc-s2-runner
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [v1, v2]
+        php-version: ['8.4', '8.3', '8.2']
+        php-type: [fpm, cli, apache]
+        php-base: [alpine, bookworm]
+        exclude:
+          - php-type: apache
+            php-base: alpine
+          - variant: v2
+            php-base: bookworm
+        include:
+          - variant: v2
+            php-version: '8.4'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: apache
+            php-base: trixie
+    
+    name: armv7-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest s6-overlay version
+        id: s6-version
+        run: |
+          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
+          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Set publish variables
+        id: vars
+        run: |
+          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
+          
+          if [ "${{ matrix.variant }}" = "v2" ]; then
+            TAG_SUFFIX="-v2"
+            DOCKERFILE="Dockerfile.v2"
+          else
+            TAG_SUFFIX=""
+            DOCKERFILE="Dockerfile.v1"
+          fi
+          
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Staging tags for per-arch builds
+          STAGING_TAG="${VERSION}${TAG_SUFFIX}-armv7-staging"
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "STAGING_TAG=${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_STAGING=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "GHCR_STAGING=ghcr.io/kingpin/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "QUAY_STAGING=quay.io/kingpinx1/php-docker:${STAGING_TAG}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}-armv7" >> $GITHUB_OUTPUT
+
+      - name: Build and push armv7 image with retry
+        id: build
+        run: |
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::group::Build attempt $ATTEMPT of $MAX_ATTEMPTS"
+            
+            if docker buildx build \
+              --platform linux/arm/v7 \
+              --file ${{ steps.vars.outputs.DOCKERFILE }} \
+              --push \
+              --provenance mode=max \
+              --cache-from type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }} \
+              --cache-to type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }} \
+              --build-arg VERSION=${{ steps.vars.outputs.VERSION }} \
+              --build-arg PHPVERSION=${{ matrix.php-version }} \
+              --build-arg BASEOS=${{ matrix.php-base }} \
+              --build-arg S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }} \
+              --build-arg BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }} \
+              --build-arg VCS_REF=${{ github.sha }} \
+              --tag ${{ steps.vars.outputs.DOCKERHUB_STAGING }} \
+              --tag ${{ steps.vars.outputs.GHCR_STAGING }} \
+              --tag ${{ steps.vars.outputs.QUAY_STAGING }} \
+              --label com.sumguy.php-docker.php.variant=${{ matrix.php-type }} \
+              --label com.sumguy.php-docker.image.variant=${{ matrix.variant }} \
+              --label com.sumguy.php-docker.build_id=${{ github.run_id }} \
+              --label com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+              --label com.sumguy.php-docker.built_by=github-actions/docker-ci \
+              --metadata-file /tmp/metadata-armv7.json \
+              .; then
+              
+              SUCCESS=true
+              echo "✅ Build and push succeeded on attempt $ATTEMPT"
+              echo "::endgroup::"
+              break
+            else
+              echo "::warning::Build attempt $ATTEMPT failed"
+              echo "::endgroup::"
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                SLEEP_TIME=$((2 ** ATTEMPT))
+                echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
+                sleep $SLEEP_TIME
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "::error::All $MAX_ATTEMPTS build attempts failed"
+            exit 1
+          fi
+          
+          # Extract digest from metadata
+          DIGEST=$(jq -r '."containerimage.digest"' /tmp/metadata-armv7.json)
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "📋 Image digest: ${DIGEST}"
+
+  # Manifest assembly job - creates multi-arch manifests from per-arch images
+  publish-manifest:
+    needs: [publish-amd64, publish-arm64, publish-armv7]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+    # runs-on: ubuntu-latest
+    runs-on: arc-s2-runner
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [v1, v2]
+        php-version: ['8.4', '8.3', '8.2']
+        php-type: [fpm, cli, apache]
+        php-base: [alpine, bookworm]
+        exclude:
+          - php-type: apache
+            php-base: alpine
+          - variant: v2
+            php-base: bookworm
+        include:
+          - variant: v2
+            php-version: '8.4'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.3'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: apache
+            php-base: trixie
+    
+    name: manifest-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Set manifest variables
+        id: vars
+        run: |
+          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
+          
+          if [ "${{ matrix.variant }}" = "v2" ]; then
+            TAG_SUFFIX="-v2"
+          else
+            TAG_SUFFIX=""
+          fi
+          
+          # Staging tags for source images
+          STAGING_AMD64="${VERSION}${TAG_SUFFIX}-amd64-staging"
+          STAGING_ARM64="${VERSION}${TAG_SUFFIX}-arm64-staging"
+          STAGING_ARMV7="${VERSION}${TAG_SUFFIX}-armv7-staging"
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
+          
+          # Final canonical tags
           echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
           echo "GHCR_TAG=ghcr.io/kingpin/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
           echo "QUAY_TAG=quay.io/kingpinx1/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}" >> $GITHUB_OUTPUT
+          
+          # Source staging tags
+          echo "DOCKERHUB_AMD64=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${STAGING_AMD64}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_ARM64=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${STAGING_ARM64}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_ARMV7=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${STAGING_ARMV7}" >> $GITHUB_OUTPUT
+          
+          echo "GHCR_AMD64=ghcr.io/kingpin/php-docker:${STAGING_AMD64}" >> $GITHUB_OUTPUT
+          echo "GHCR_ARM64=ghcr.io/kingpin/php-docker:${STAGING_ARM64}" >> $GITHUB_OUTPUT
+          echo "GHCR_ARMV7=ghcr.io/kingpin/php-docker:${STAGING_ARMV7}" >> $GITHUB_OUTPUT
+          
+          echo "QUAY_AMD64=quay.io/kingpinx1/php-docker:${STAGING_AMD64}" >> $GITHUB_OUTPUT
+          echo "QUAY_ARM64=quay.io/kingpinx1/php-docker:${STAGING_ARM64}" >> $GITHUB_OUTPUT
+          echo "QUAY_ARMV7=quay.io/kingpinx1/php-docker:${STAGING_ARMV7}" >> $GITHUB_OUTPUT
 
-      - name: Build and push multi-arch image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ steps.vars.outputs.DOCKERFILE }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          provenance: mode=max
-          cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
-          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
-          build-args: |
-            VERSION=${{ steps.vars.outputs.VERSION }}
-            PHPVERSION=${{ matrix.php-version }}
-            BASEOS=${{ matrix.php-base }}
-            S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }}
-            BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
-            VCS_REF=${{ github.sha }}
-          tags: |
-            ${{ steps.vars.outputs.DOCKERHUB_TAG }}
-            ${{ steps.vars.outputs.GHCR_TAG }}
-            ${{ steps.vars.outputs.QUAY_TAG }}
-          labels: |
-            com.sumguy.php-docker.php.variant=${{ matrix.php-type }}
-            com.sumguy.php-docker.image.variant=${{ matrix.variant }}
-            com.sumguy.php-docker.build_id=${{ github.run_id }}
-            com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            com.sumguy.php-docker.built_by=github-actions/docker-ci
+      - name: Create and push DockerHub multi-arch manifest with retry
+        run: |
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::group::DockerHub manifest attempt $ATTEMPT of $MAX_ATTEMPTS"
+            
+            if docker buildx imagetools create -t ${{ steps.vars.outputs.DOCKERHUB_TAG }} \
+              ${{ steps.vars.outputs.DOCKERHUB_AMD64 }} \
+              ${{ steps.vars.outputs.DOCKERHUB_ARM64 }} \
+              ${{ steps.vars.outputs.DOCKERHUB_ARMV7 }}; then
+              
+              SUCCESS=true
+              echo "✅ DockerHub manifest created successfully on attempt $ATTEMPT"
+              echo "::endgroup::"
+              break
+            else
+              echo "::warning::DockerHub manifest creation attempt $ATTEMPT failed"
+              echo "::endgroup::"
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                SLEEP_TIME=$((2 ** ATTEMPT))
+                echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
+                sleep $SLEEP_TIME
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "::error::All $MAX_ATTEMPTS DockerHub manifest attempts failed"
+            exit 1
+          fi
+
+      - name: Create and push GHCR multi-arch manifest with retry
+        run: |
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::group::GHCR manifest attempt $ATTEMPT of $MAX_ATTEMPTS"
+            
+            if docker buildx imagetools create -t ${{ steps.vars.outputs.GHCR_TAG }} \
+              ${{ steps.vars.outputs.GHCR_AMD64 }} \
+              ${{ steps.vars.outputs.GHCR_ARM64 }} \
+              ${{ steps.vars.outputs.GHCR_ARMV7 }}; then
+              
+              SUCCESS=true
+              echo "✅ GHCR manifest created successfully on attempt $ATTEMPT"
+              echo "::endgroup::"
+              break
+            else
+              echo "::warning::GHCR manifest creation attempt $ATTEMPT failed"
+              echo "::endgroup::"
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                SLEEP_TIME=$((2 ** ATTEMPT))
+                echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
+                sleep $SLEEP_TIME
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "::error::All $MAX_ATTEMPTS GHCR manifest attempts failed"
+            exit 1
+          fi
+
+      - name: Create and push Quay multi-arch manifest with retry
+        run: |
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "::group::Quay manifest attempt $ATTEMPT of $MAX_ATTEMPTS"
+            
+            if docker buildx imagetools create -t ${{ steps.vars.outputs.QUAY_TAG }} \
+              ${{ steps.vars.outputs.QUAY_AMD64 }} \
+              ${{ steps.vars.outputs.QUAY_ARM64 }} \
+              ${{ steps.vars.outputs.QUAY_ARMV7 }}; then
+              
+              SUCCESS=true
+              echo "✅ Quay manifest created successfully on attempt $ATTEMPT"
+              echo "::endgroup::"
+              break
+            else
+              echo "::warning::Quay manifest creation attempt $ATTEMPT failed"
+              echo "::endgroup::"
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                SLEEP_TIME=$((2 ** ATTEMPT))
+                echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
+                sleep $SLEEP_TIME
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "::error::All $MAX_ATTEMPTS Quay manifest attempts failed"
+            exit 1
+          fi
 
       - name: Create bookworm compatibility tag for v2 trixie images
         if: matrix.variant == 'v2' && matrix.php-base == 'trixie'
@@ -429,34 +1091,62 @@ jobs:
           echo "::group::Creating bookworm compatibility tags for trixie-built v2 image"
           
           # Replace 'trixie' with 'bookworm' in tag names to maintain backward compatibility
-          BOOKWORM_VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-bookworm"
+          BOOKWORM_VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-bookworm-v2"
           
-          # Create manifest aliases pointing trixie-built images to bookworm tags
-          docker buildx imagetools create -t \
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${BOOKWORM_VERSION}-v2 \
-            ${{ steps.vars.outputs.DOCKERHUB_TAG }}
+          # Create manifest aliases pointing to the main trixie multi-arch manifest
+          MAX_ATTEMPTS=3
           
-          docker buildx imagetools create -t \
-            ghcr.io/kingpin/php-docker:${BOOKWORM_VERSION}-v2 \
-            ${{ steps.vars.outputs.GHCR_TAG }}
+          for registry in dockerhub ghcr quay; do
+            case $registry in
+              dockerhub)
+                TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${BOOKWORM_VERSION}"
+                SOURCE="${{ steps.vars.outputs.DOCKERHUB_TAG }}"
+                ;;
+              ghcr)
+                TAG="ghcr.io/kingpin/php-docker:${BOOKWORM_VERSION}"
+                SOURCE="${{ steps.vars.outputs.GHCR_TAG }}"
+                ;;
+              quay)
+                TAG="quay.io/kingpinx1/php-docker:${BOOKWORM_VERSION}"
+                SOURCE="${{ steps.vars.outputs.QUAY_TAG }}"
+                ;;
+            esac
+            
+            ATTEMPT=1
+            SUCCESS=false
+            while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+              if docker buildx imagetools create -t "$TAG" "$SOURCE"; then
+                echo "✅ Created $registry bookworm compat tag on attempt $ATTEMPT"
+                SUCCESS=true
+                break
+              else
+                echo "::warning::$registry bookworm compat tag attempt $ATTEMPT failed"
+                if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                  sleep $((2 ** ATTEMPT))
+                fi
+                ATTEMPT=$((ATTEMPT + 1))
+              fi
+            done
+            
+            if [ "$SUCCESS" = "false" ]; then
+              echo "::error::Failed to create $registry bookworm compat tag after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+          done
           
-          docker buildx imagetools create -t \
-            quay.io/kingpinx1/php-docker:${BOOKWORM_VERSION}-v2 \
-            ${{ steps.vars.outputs.QUAY_TAG }}
-          
-          echo "✅ Created bookworm compatibility tags pointing to trixie image"
+          echo "✅ Created all bookworm compatibility tags"
           echo "::endgroup::"
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: image
-          image-ref: ${{ steps.vars.outputs.DOCKERHUB_TAG }}
-          format: 'sarif'
-          severity: 'CRITICAL,HIGH'
-          output: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+      - name: Verify multi-arch manifest
+        run: |
+          echo "::group::Verifying DockerHub manifest"
+          docker buildx imagetools inspect ${{ steps.vars.outputs.DOCKERHUB_TAG }}
+          echo "::endgroup::"
+          
+          echo "::group::Verifying GHCR manifest"
+          docker buildx imagetools inspect ${{ steps.vars.outputs.GHCR_TAG }}
+          echo "::endgroup::"
+          
+          echo "::group::Verifying Quay manifest"
+          docker buildx imagetools inspect ${{ steps.vars.outputs.QUAY_TAG }}
+          echo "::endgroup::"
