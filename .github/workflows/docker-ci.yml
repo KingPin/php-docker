@@ -31,8 +31,8 @@ concurrency:
 
 jobs:
   build-and-test:
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
+    # runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
@@ -277,8 +277,8 @@ jobs:
   publish-amd64:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
+    # runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
@@ -477,8 +477,8 @@ jobs:
   publish-arm64:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
+    # runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
@@ -663,8 +663,8 @@ jobs:
   publish-armv7:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
+    # runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
@@ -850,8 +850,8 @@ jobs:
   publish-manifest:
     needs: [publish-amd64, publish-arm64, publish-armv7]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
+    # runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
