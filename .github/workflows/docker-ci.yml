@@ -31,7 +31,8 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
@@ -275,7 +276,8 @@ jobs:
   publish:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: arc-s2-runner
     strategy:
       fail-fast: false
       matrix:
