@@ -1,5 +1,5 @@
 ARG VERSION=8.3-cli-alpine
-FROM php:${VERSION}
+FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG PHPVERSION
 ARG BASEOS
 
