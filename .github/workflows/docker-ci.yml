@@ -330,8 +330,6 @@ jobs:
             php-base: trixie
     
     name: amd64-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
     
     steps:
       - name: Checkout
@@ -532,8 +530,6 @@ jobs:
             php-base: trixie
     
     name: arm64-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
     
     steps:
       - name: Checkout
@@ -720,8 +716,6 @@ jobs:
             php-base: trixie
     
     name: armv7-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
     
     steps:
       - name: Checkout
