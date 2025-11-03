@@ -641,7 +641,7 @@ jobs:
               echo "::endgroup::"
               
               if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                SLEEP_TIME=$((2 ** (ATTEMPT - 1)))
+                SLEEP_TIME=$((5 * 2 ** (ATTEMPT - 1)))
                 echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
                 sleep $SLEEP_TIME
               fi
@@ -827,7 +827,7 @@ jobs:
               echo "::endgroup::"
               
               if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                SLEEP_TIME=$((2 ** (ATTEMPT - 1)))
+                SLEEP_TIME=$((5 * 2 ** (ATTEMPT - 1)))
                 echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
                 sleep $SLEEP_TIME
               fi
@@ -991,7 +991,7 @@ jobs:
               echo "::endgroup::"
               
               if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                SLEEP_TIME=$((2 ** (ATTEMPT - 1)))
+                SLEEP_TIME=$((5 * 2 ** (ATTEMPT - 1)))
                 echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
                 sleep $SLEEP_TIME
               fi
@@ -1028,7 +1028,7 @@ jobs:
               echo "::endgroup::"
               
               if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                SLEEP_TIME=$((2 ** (ATTEMPT - 1)))
+                SLEEP_TIME=$((5 * 2 ** (ATTEMPT - 1)))
                 echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
                 sleep $SLEEP_TIME
               fi
@@ -1065,7 +1065,7 @@ jobs:
               echo "::endgroup::"
               
               if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                SLEEP_TIME=$((2 ** (ATTEMPT - 1)))
+                SLEEP_TIME=$((5 * 2 ** (ATTEMPT - 1)))
                 echo "⏳ Waiting ${SLEEP_TIME}s before retry..."
                 sleep $SLEEP_TIME
               fi
@@ -1116,7 +1116,7 @@ jobs:
               else
                 echo "::warning::$registry bookworm compat tag attempt $ATTEMPT failed"
                 if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                  sleep $((2 ** (ATTEMPT - 1)))
+                  sleep $((5 * 2 ** (ATTEMPT - 1)))
                 fi
                 ATTEMPT=$((ATTEMPT + 1))
               fi
