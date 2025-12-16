@@ -157,8 +157,26 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         *) S6_ARCH="x86_64" ;; \
     esac && \
     echo "Downloading s6-overlay ${S6_OVERLAY_VERSION} for ${S6_ARCH}" && \
-    wget -O /tmp/s6-overlay-noarch.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-    wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+    for ATTEMPT in 1 2 3; do \
+        if wget -O /tmp/s6-overlay-noarch.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+           wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz; then \
+            break; \
+        else \
+            if [ $ATTEMPT -lt 3 ]; then \
+                case $ATTEMPT in \
+                    1) SLEEP_TIME=5 ;; \
+                    2) SLEEP_TIME=10 ;; \
+                    3) SLEEP_TIME=20 ;; \
+                esac; \
+                echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
+                sleep $SLEEP_TIME; \
+                rm -f /tmp/s6-overlay-*.tar.xz; \
+            else \
+                echo "Failed to download s6-overlay after 3 attempts"; \
+                exit 1; \
+            fi; \
+        fi; \
+    done && \
     tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
     tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
