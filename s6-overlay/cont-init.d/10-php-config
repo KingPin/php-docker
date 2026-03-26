@@ -1,5 +1,4 @@
 #!/bin/sh
-# Note: changed from bash to sh as it's more universally available in container images
 
 echo "Configuring PHP settings from environment variables..."
 

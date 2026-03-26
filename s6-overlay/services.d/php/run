@@ -1,5 +1,4 @@
 #!/bin/sh
-# Note: Changed from bash to sh for better compatibility
 
 # This script determines how to start the PHP service based on the image type
 

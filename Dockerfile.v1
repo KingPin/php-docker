@@ -1,5 +1,5 @@
 ARG VERSION=8.3-cli-alpine
-FROM php:${VERSION}
+FROM public.ecr.aws/docker/library/php:${VERSION}
 ARG PHPVERSION
 ARG BASEOS
 
@@ -7,13 +7,7 @@ ARG BASEOS
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies based on the base OS
-RUN if [ "$BASEOS" = "bullseye" ]; then \
-        echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/bullseye-backports.list && \
-        apt-get update && \
-        apt-get -y upgrade && \
-        apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo-progs pngquant webp && \
-        rm -rf /var/lib/apt/lists/*; \
-    elif [ "$BASEOS" = "bookworm" ]; then \
+RUN if [ "$BASEOS" = "bookworm" ]; then \
         echo 'deb http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list && \
         apt-get update && \
         apt-get -y upgrade && \
@@ -24,27 +18,48 @@ RUN if [ "$BASEOS" = "bullseye" ]; then \
         apk add --no-cache curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools; \
     fi
 
-# Add all needed PHP extensions
-RUN curl -sSLf -o /usr/local/bin/install-php-extensions \
-        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
-        chmod +x /usr/local/bin/install-php-extensions && \
-        install-php-extensions amqp bcmath bz2 calendar ctype exif intl imagick imap json mbstring ldap mcrypt memcached mongodb \
-         mysqli opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer
+# Add all needed PHP extensions with retry logic for transient network failures
+RUN for ATTEMPT in 1 2 3; do \
+        if curl -sSLf -o /usr/local/bin/install-php-extensions \
+            https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions; then \
+            break; \
+        else \
+            if [ $ATTEMPT -lt 3 ]; then \
+                case $ATTEMPT in \
+                    1) SLEEP_TIME=5 ;; \
+                    2) SLEEP_TIME=10 ;; \
+                esac; \
+                echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
+                sleep $SLEEP_TIME; \
+                rm -f /usr/local/bin/install-php-extensions; \
+            else \
+                echo "Failed to download install-php-extensions after 3 attempts"; \
+                exit 1; \
+            fi; \
+        fi; \
+    done && \
+    chmod +x /usr/local/bin/install-php-extensions && \
+    for ATTEMPT in 1 2 3; do \
+        if install-php-extensions amqp bcmath bz2 calendar ctype exif intl imagick imap json mbstring ldap mcrypt memcached mongodb \
+           mysqli opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer; then \
+            break; \
+        else \
+            if [ $ATTEMPT -lt 3 ]; then \
+                case $ATTEMPT in \
+                    1) SLEEP_TIME=5 ;; \
+                    2) SLEEP_TIME=10 ;; \
+                esac; \
+                echo "Extension installation attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
+                sleep $SLEEP_TIME; \
+            else \
+                echo "Failed to install PHP extensions after 3 attempts"; \
+                exit 1; \
+            fi; \
+        fi; \
+    done
 
 # Enable Apache rewrite mod, if applicable
 RUN if command -v a2enmod; then a2enmod rewrite; fi
-
-# # Add mcrypt and imagick based on PHP version
-# RUN case "$PHPVERSION" in \
-#         7|8.0|8.1|8.2) \
-#             install-php-extensions imagick; \
-#             ;; \
-#         8.3) \
-#             install-php-extensions imagick/imagick@master; \
-#             ;; \
-#         *) \
-#             ;; \
-#     esac
 
 # Disable AV1 only in armv7
 RUN case $(uname -m) in \

@@ -28,9 +28,9 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 
 > **ℹ️ Base OS Update (v2 only)**: v2 Debian images now use **Debian Trixie** as the base OS (following upstream PHP official images). For backward compatibility, `:bookworm` tags continue to work and point to the same Trixie-built images. v1 images remain on Bookworm. [See migration notes](docs/migration.md#debian-trixie-migration-v2-only) for details.
 
-## Environment Variables
+## Environment Variables (v2 only)
 
-The following environment variables can be overridden when running containers:
+The following environment variables are applied at container startup by the s6-overlay init script in **v2 images only**. v1 images do not process these variables.
 
 ### Memory Settings
 
@@ -75,7 +75,7 @@ The following environment variables can be overridden when running containers:
 ### Example usage
 
 ```bash
-docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-docker:8.3-fpm-alpine
+docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-docker:8.3-fpm-alpine-v2
 ```
 
 ## 🚀 Quick Start
@@ -118,15 +118,13 @@ We maintain **two image variants** to support both existing users and modern use
 
 - Simpler Dockerfile with fewer runtime layers
 - No s6-overlay or external init system
-- Builds with standard `docker build` (no BuildKit required)
-- Smaller image footprint in some configurations
+- Smaller image footprint
 
 **Pros:**
 
-✅ Drop-in replacement for existing deployments  
-✅ Simpler container runtime behavior  
-✅ Smaller learning curve  
-✅ No BuildKit dependency for local builds
+✅ Drop-in replacement for existing deployments
+✅ Simpler container runtime behavior
+✅ Smaller learning curve
 
 **Cons:**
 
@@ -151,22 +149,23 @@ We maintain **two image variants** to support both existing users and modern use
 - Uses [s6-overlay](https://github.com/just-containers/s6-overlay) as PID 1 init
 - Proper signal handling and zombie process reaping
 - Service supervision and restart policies
-- BuildKit-enabled for better build performance and caching
 - Built on Debian Trixie (`:trixie` tags) with `:bookworm` compatibility aliases
 
 **Pros:**
 
-✅ Proper PID 1 and process supervision (s6)  
-✅ Safe for running FPM + sidecar processes (e.g., cron, queue workers)  
-✅ Better build performance with BuildKit cache mounts  
-✅ Easier to add background services and health checks  
+✅ Proper PID 1 and process supervision (s6)
+✅ Safe for running FPM + sidecar processes (e.g., cron, queue workers)
+✅ Environment-based PHP config at runtime
+✅ Includes non-root user (`appuser`, UID 1000) for running your application
+✅ Easier to add background services and health checks
 ✅ Handles container signals properly
+
+> The container entrypoint runs as root (required for s6-overlay as PID 1), but a non-root `appuser` is pre-created. To run your app as this user, use `--user 1000:1000` or configure your orchestrator's security context.
 
 **Cons:**
 
-❌ Requires Docker BuildKit/buildx for advanced features  
-❌ Slightly larger image due to s6-overlay (~2-3MB)  
-❌ Different runtime behavior may require minor adjustments  
+❌ Slightly larger image due to s6-overlay (~2-3MB)
+❌ Different runtime behavior may require minor adjustments
 ❌ More complex init system to understand
 
 **Use v2 when:**
@@ -211,9 +210,9 @@ For more details, see [docs/ci.md](docs/ci.md).
 
 These images are designed with security in mind:
 
-- **Non-root User**: Containers run as a non-root `appuser` (UID 1000) by default
-- **Limited Permissions**: `/var/www/html` directory has appropriate permissions
-- **Security Updates**: Images are regularly scanned for vulnerabilities
+- **Non-root User (v2)**: v2 images include a pre-created `appuser` (UID 1000) for running your application. The entrypoint runs as root for s6-overlay, but your app can run as appuser via `--user 1000:1000`. v1 images run as the base PHP image default (root)
+- **Limited Permissions (v2)**: `/var/www/html` directory has appropriate ownership and permissions
+- **Security Updates**: Images are regularly scanned for vulnerabilities via Trivy
 
 ### Security Best Practices
 
@@ -335,7 +334,7 @@ Both v1 and v2 variants are available for all combinations below:
 | 8.2         | FPM    | Bookworm  | `8.2-fpm-bookworm`     | `8.2-fpm-bookworm-v2`      |
 | 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`  | `8.2-apache-bookworm-v2`   |
 
-> **Note:** PHP 8.1+ images are built on Bookworm (Debian 12). Bullseye tags redirect to Bookworm for PHP 8.1+.
+> **Note:** v1 Debian images use Bookworm. v2 Debian images use Trixie, with `:bookworm-v2` tags as compatibility aliases pointing to the same Trixie-built images.
 
 ### Deprecated Tags (v1 only)
 
@@ -360,17 +359,17 @@ The following tags are deprecated and will not be built going forward, but remai
 
 ## 📊 Image Sizes
 
-Approximate compressed sizes (v1 / v2):
+Approximate compressed sizes (vary by PHP version and platform):
 
-| Type   | OS        | v1 Size | v2 Size  | Delta    |
-|--------|-----------|---------|----------|----------|
-| CLI    | Alpine    | ~80MB   | ~83MB    | +3MB     |
-| CLI    | Bookworm  | ~140MB  | ~143MB   | +3MB     |
-| FPM    | Alpine    | ~85MB   | ~88MB    | +3MB     |
-| FPM    | Bookworm  | ~150MB  | ~153MB   | +3MB     |
-| Apache | Bookworm  | ~180MB  | ~183MB   | +3MB     |
+| Type   | OS        | v1 Size | v2 Size  |
+|--------|-----------|---------|----------|
+| CLI    | Alpine    | ~80MB   | ~83MB    |
+| CLI    | Bookworm  | ~140MB  | ~143MB   |
+| FPM    | Alpine    | ~85MB   | ~88MB    |
+| FPM    | Bookworm  | ~150MB  | ~153MB   |
+| Apache | Bookworm  | ~180MB  | ~183MB   |
 
-> v2 overhead is primarily the s6-overlay binaries (~2-3MB per image).
+> v2 overhead is primarily the s6-overlay binaries (~2-3MB). Build dependencies are cleaned up to minimize image size.
 
 ## Pre-installed PHP Extensions
 
@@ -425,7 +424,7 @@ Approximate compressed sizes (v1 / v2):
 docker run -d --name php-app kingpin/php-docker:8.3-cli-alpine php -v
 ```
 
-### With docker-compose
+### With Docker Compose
 
 ```yaml
 services:
@@ -487,29 +486,32 @@ The following PHP versions are **no longer actively built** but remain available
 
 ## 🏗️ Architecture Diagram
 ```
-                ┌───────────────┐
-                │   Base Image  │
-                │    php:X.Y    │
-                └───────┬───────┘
-                        │
-          ┌─────────────┼─────────────┐
-          │             │             │
-┌─────────▼────┐ ┌──────▼─────┐ ┌─────▼──────┐
-│   Alpine OS  │ │ Bullseye OS│ │ Bookworm OS│
-└─────────┬────┘ └──────┬─────┘ └─────┬──────┘
-          │             │             │
-┌─────────▼────┐ ┌──────▼─────┐ ┌─────▼──────┐
-│ Extensions & │ │ Extensions │ │Extensions &│
-│  Libraries   │ │  Libraries │ │ Libraries  │
-└─────────┬────┘ └──────┬─────┘ └─────┬──────┘
-          │             │             │
-          └─────────────┼─────────────┘
-                        │
-             ┌──────────┼──────────┐
-             │          │          │
-      ┌──────▼───┐ ┌────▼────┐ ┌───▼─────┐
-      │   CLI    │ │   FPM   │ │  Apache │
-      └──────────┘ └─────────┘ └─────────┘
+                  ┌───────────────┐
+                  │   Base Image  │
+                  │  php:X.Y-...  │
+                  └───────┬───────┘
+                          │
+            ┌─────────────┴─────────────┐
+            │                           │
+     ┌──────▼──────┐            ┌───────▼───────┐
+     │     v1      │            │      v2       │
+     │  (simple)   │            │ (s6-overlay)  │
+     └──────┬──────┘            └───────┬───────┘
+            │                           │
+    ┌───────┼───────┐          ┌────────┼────────┐
+    │               │          │                 │
+ Alpine        Bookworm     Alpine           Trixie
+    │               │          │            (bookworm
+    │               │          │             compat)
+    └───────┬───────┘          └────────┬────────┘
+            │                           │
+            └─────────┬─────────────────┘
+                      │
+           ┌──────────┼──────────┐
+           │          │          │
+    ┌──────▼───┐ ┌────▼────┐ ┌───▼─────┐
+    │   CLI    │ │   FPM   │ │  Apache │
+    └──────────┘ └─────────┘ └─────────┘
 ```
 
 ## Contributing
@@ -536,31 +538,7 @@ Our CI/CD pipeline will automatically test your changes when you submit a PR.
 
 ## License
 
-This project is licensed under the MIT License - see below for details:
-
-```
-MIT License
-
-Copyright (c) 2023 Kingpin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
