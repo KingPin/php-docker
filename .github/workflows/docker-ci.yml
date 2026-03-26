@@ -31,23 +31,20 @@ concurrency:
 
 jobs:
   build-and-test:
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         variant: [v1, v2]
         php-version: ['8.4', '8.3', '8.2']
-        php-type: [fpm, cli]
+        php-type: [fpm, cli, apache]
         php-base: [alpine, bookworm]
         exclude:
           - php-type: apache
             php-base: alpine
-          # v2 uses trixie as the Debian base; bookworm retained for v1
           - variant: v2
             php-base: bookworm
         include:
-          # v2 builds on trixie for Debian images
           - variant: v2
             php-version: '8.4'
             php-type: fpm
@@ -55,6 +52,10 @@ jobs:
           - variant: v2
             php-version: '8.4'
             php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.4'
+            php-type: apache
             php-base: trixie
           - variant: v2
             php-version: '8.3'
@@ -65,12 +66,20 @@ jobs:
             php-type: cli
             php-base: trixie
           - variant: v2
+            php-version: '8.3'
+            php-type: apache
+            php-base: trixie
+          - variant: v2
             php-version: '8.2'
             php-type: fpm
             php-base: trixie
           - variant: v2
             php-version: '8.2'
             php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.2'
+            php-type: apache
             php-base: trixie
     
     name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
@@ -269,6 +278,18 @@ jobs:
           echo "✅ PHP-FPM version check passed"
           echo "::endgroup::"
 
+      - name: Smoke tests - Apache specific
+        if: matrix.php-type == 'apache'
+        run: |
+          echo "::group::Testing Apache"
+          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} apache2 -v 2>&1 | tee apache-version.txt; then
+            echo "::error::Failed to run apache2 -v"
+            cat apache-version.txt || true
+            exit 1
+          fi
+          echo "✅ Apache version check passed"
+          echo "::endgroup::"
+
       - name: Summary
         run: |
           echo "::notice::✅ Build and tests passed for ${{ matrix.variant }} - ${{ steps.vars.outputs.TAG }}"
@@ -276,8 +297,7 @@ jobs:
   publish:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
-    # runs-on: ubuntu-latest
-    runs-on: arc-s2-runner
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:

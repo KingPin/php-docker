@@ -111,7 +111,6 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
             libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools \
             rabbitmq-c rabbitmq-c-dev \
             libpng libpng-dev \
-            imagemagick \
             imagemagick-dev \
             c-client \
             snappy snappy-dev \
@@ -129,9 +128,27 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
             libuuid util-linux-dev \
             libxpm libxpm-dev; \
     fi && \
-    # Download and install PHP extension installer
-    curl -sSLf -o /usr/local/bin/install-php-extensions \
-        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
+    # Download PHP extension installer with retry
+    for ATTEMPT in 1 2 3; do \
+        if curl -sSLf -o /usr/local/bin/install-php-extensions \
+            https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions; then \
+            break; \
+        else \
+            if [ $ATTEMPT -lt 3 ]; then \
+                case $ATTEMPT in \
+                    1) SLEEP_TIME=5 ;; \
+                    2) SLEEP_TIME=10 ;; \
+                    3) SLEEP_TIME=20 ;; \
+                esac; \
+                echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
+                sleep $SLEEP_TIME; \
+                rm -f /usr/local/bin/install-php-extensions; \
+            else \
+                echo "Failed to download install-php-extensions after 3 attempts"; \
+                exit 1; \
+            fi; \
+        fi; \
+    done && \
     chmod +x /usr/local/bin/install-php-extensions && \
     # Install PHP extensions
     install-php-extensions \
@@ -180,6 +197,60 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
     tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
     tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
+    # Clean up build dependencies to reduce image size
+    if [ "$BASEOS" = "trixie" ]; then \
+        apt-mark manual \
+            curl git zip unzip wget ca-certificates xz-utils \
+            ghostscript imagemagick optipng gifsicle pngcrush jpegoptim \
+            libjpeg-turbo-progs pngquant webp \
+            libmemcachedutil2t64 libmemcached11t64 \
+            libmagickcore-7.q16-10 libmagickwand-7.q16-10 \
+            libvips42t64 libpng16-16t64 libavif16 \
+            libsnmp40t64 librabbitmq4 libpq5 \
+            libssl3t64 libzip5 libicu76 \
+            libldap2 libtidy58 libxslt1.1 \
+            libyaml-0-2 libuuid1 libsnappy1v5 \
+            libwebp7 libxpm4 && \
+        apt-get purge -y --auto-remove \
+            build-essential equivs \
+            libmemcached-dev libmagickwand-dev libvips-dev \
+            libpng-dev libavif-dev libsnmp-dev \
+            librabbitmq-dev libpq-dev libssl-dev \
+            libzip-dev libbz2-dev libicu-dev \
+            libldap2-dev libtidy-dev libxslt1-dev \
+            libyaml-dev uuid-dev libzstd-dev libxpm-dev && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$BASEOS" = "bookworm" ]; then \
+        apt-mark manual \
+            curl git zip unzip wget ca-certificates xz-utils \
+            ghostscript imagemagick optipng gifsicle pngcrush jpegoptim \
+            libjpeg-turbo-progs pngquant webp \
+            libmemcachedutil2 libmemcached11 \
+            libmagickcore-6.q16-6 libmagickwand-6.q16-6 \
+            libvips42 libpng16-16 libavif15 \
+            libsnmp40 librabbitmq4 libpq5 \
+            libssl3 libzip4 \
+            libldap-2.5-0 libtidy5deb1 libxslt1.1 \
+            libyaml-0-2 libuuid1 libxpm4 && \
+        apt-get purge -y --auto-remove \
+            build-essential \
+            libmemcached-dev libmagickwand-dev libvips-dev \
+            libpng-dev libavif-dev libsnmp-dev \
+            librabbitmq-dev libpq-dev libssl-dev \
+            libzip-dev libbz2-dev libicu-dev \
+            libldap2-dev libtidy-dev libxslt1-dev \
+            libyaml-dev uuid-dev libzstd-dev libxpm-dev && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$BASEOS" = "alpine" ]; then \
+        apk del \
+            build-base \
+            rabbitmq-c-dev libpng-dev imagemagick-dev \
+            snappy-dev postgresql-dev net-snmp-dev \
+            tidyhtml-dev vips-dev libxslt-dev \
+            yaml-dev libzip-dev libmemcached-dev \
+            libavif-dev icu-dev openldap-dev \
+            util-linux-dev libxpm-dev; \
+    fi && \
     test -f /init || (echo "ERROR: /init not found after s6-overlay installation" && exit 1)
 
 # Set useful PHP environment variables with defaults
