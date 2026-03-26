@@ -12,6 +12,9 @@ ARG VERSION
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY extras/retry.sh /usr/local/bin/retry
+RUN chmod +x /usr/local/bin/retry
+
 # OCI standard labels
 LABEL org.opencontainers.image.title="php-docker" \
       org.opencontainers.image.description="PHP runtime with s6-overlay and curated extensions" \
@@ -26,7 +29,9 @@ LABEL org.opencontainers.image.title="php-docker" \
 
 # Install build dependencies, PHP extensions, runtime libraries, and s6-overlay
 # Then clean up build-only packages in a single layer to minimize image size
-RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked,id=aptlists-$BASEOS \
+    if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get -y upgrade && \
         # Install build tools, dev packages, and runtime libraries together
@@ -129,25 +134,8 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
             libxpm libxpm-dev; \
     fi && \
     # Download PHP extension installer with retry
-    for ATTEMPT in 1 2 3; do \
-        if curl -sSLf -o /usr/local/bin/install-php-extensions \
-            https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions; then \
-            break; \
-        else \
-            if [ $ATTEMPT -lt 3 ]; then \
-                case $ATTEMPT in \
-                    1) SLEEP_TIME=5 ;; \
-                    2) SLEEP_TIME=10 ;; \
-                esac; \
-                echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
-                sleep $SLEEP_TIME; \
-                rm -f /usr/local/bin/install-php-extensions; \
-            else \
-                echo "Failed to download install-php-extensions after 3 attempts"; \
-                exit 1; \
-            fi; \
-        fi; \
-    done && \
+    retry 3 curl -sSLf -o /usr/local/bin/install-php-extensions \
+        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
     chmod +x /usr/local/bin/install-php-extensions && \
     # Install PHP extensions
     install-php-extensions \
@@ -173,25 +161,10 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         *) S6_ARCH="x86_64" ;; \
     esac && \
     echo "Downloading s6-overlay ${S6_OVERLAY_VERSION} for ${S6_ARCH}" && \
-    for ATTEMPT in 1 2 3; do \
-        if wget -O /tmp/s6-overlay-noarch.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-           wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz; then \
-            break; \
-        else \
-            if [ $ATTEMPT -lt 3 ]; then \
-                case $ATTEMPT in \
-                    1) SLEEP_TIME=5 ;; \
-                    2) SLEEP_TIME=10 ;; \
-                esac; \
-                echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
-                sleep $SLEEP_TIME; \
-                rm -f /tmp/s6-overlay-*.tar.xz; \
-            else \
-                echo "Failed to download s6-overlay after 3 attempts"; \
-                exit 1; \
-            fi; \
-        fi; \
-    done && \
+    retry 3 wget -O /tmp/s6-overlay-noarch.tar.xz \
+        https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+    retry 3 wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+        https://github.com/just-containers/s6-overlay/releases/download/${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
     tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
     tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-${S6_ARCH}.tar.xz && \

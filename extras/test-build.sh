@@ -51,7 +51,7 @@ build_v1() {
     echo "Building v1: ${IMAGE_NAME}:${tag}"
     echo "  VERSION=${version}, PHPVERSION=${phpversion}, BASEOS=${baseos}"
     
-    docker build -f Dockerfile.v1 \
+    DOCKER_BUILDKIT=1 docker build -f Dockerfile.v1 \
         --build-arg VERSION="${version}" \
         --build-arg PHPVERSION="${phpversion}" \
         --build-arg BASEOS="${baseos}" \
