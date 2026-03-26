@@ -30,13 +30,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      php-versions: ${{ steps.matrix.outputs.php-versions }}
+      s6-version: ${{ steps.s6.outputs.version }}
+    steps:
+      - name: Determine PHP versions to test
+        id: matrix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo 'php-versions=["8.4","8.2"]' >> $GITHUB_OUTPUT
+            echo "::notice::PR detected — testing PHP 8.4 + 8.2 only (skipping 8.3)"
+          else
+            echo 'php-versions=["8.4","8.3","8.2"]' >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get latest s6-overlay version
+        id: s6
+        run: |
+          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
+          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
+
   build-and-test:
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         variant: [v1, v2]
-        php-version: ['8.4', '8.3', '8.2']
+        php-version: ${{ fromJson(needs.setup.outputs.php-versions) }}
         php-type: [fpm, cli, apache]
         php-base: [alpine, bookworm]
         exclude:
@@ -88,18 +112,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get latest s6-overlay version
-        id: s6-version
-        run: |
-          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
-          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
-          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: amd64,arm64,arm
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -138,7 +150,7 @@ jobs:
             VERSION=${{ steps.vars.outputs.VERSION }}
             PHPVERSION=${{ matrix.php-version }}
             BASEOS=${{ matrix.php-base }}
-            S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }}
+            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6-version }}
             BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
             VCS_REF=${{ github.sha }}
           tags: test-${{ steps.vars.outputs.TAG }}
@@ -295,7 +307,7 @@ jobs:
           echo "::notice::✅ Build and tests passed for ${{ matrix.variant }} - ${{ steps.vars.outputs.TAG }}"
 
   publish:
-    needs: build-and-test
+    needs: [setup, build-and-test]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     strategy:
@@ -355,13 +367,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Get latest s6-overlay version
-        id: s6-version
-        run: |
-          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
-          echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
-          echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
@@ -429,7 +434,7 @@ jobs:
             VERSION=${{ steps.vars.outputs.VERSION }}
             PHPVERSION=${{ matrix.php-version }}
             BASEOS=${{ matrix.php-base }}
-            S6_OVERLAY_VERSION=${{ steps.s6-version.outputs.version }}
+            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6-version }}
             BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
             VCS_REF=${{ github.sha }}
           tags: |
