@@ -31,7 +31,6 @@ LABEL org.opencontainers.image.title="php-docker" \
 # Then clean up build-only packages in a single layer to minimize image size
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked,id=aptlists-$BASEOS \
-    --mount=type=cache,target=/var/cache/apk,sharing=locked,id=apk-$BASEOS \
     if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
         apt-get update && \
         apt-get -y upgrade && \

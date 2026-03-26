@@ -1,5 +1,5 @@
 #!/bin/sh
-# Retry a command with exponential backoff
+# Retry a command with linear backoff
 # Usage: retry <max_attempts> <command...>
 # Example: retry 3 curl -sSLf -o /tmp/file https://example.com/file
 

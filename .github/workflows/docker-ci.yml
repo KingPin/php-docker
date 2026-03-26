@@ -33,23 +33,56 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      php-versions: ${{ steps.matrix.outputs.php-versions }}
-      s6-version: ${{ steps.s6.outputs.version }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      s6_version: ${{ steps.s6.outputs.version }}
     steps:
-      - name: Determine PHP versions to test
+      - name: Compute build matrix
         id: matrix
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo 'php-versions=["8.4","8.2"]' >> $GITHUB_OUTPUT
+            PHP_VERSIONS='["8.4","8.2"]'
             echo "::notice::PR detected — testing PHP 8.4 + 8.2 only (skipping 8.3)"
           else
-            echo 'php-versions=["8.4","8.3","8.2"]' >> $GITHUB_OUTPUT
+            PHP_VERSIONS='["8.4","8.3","8.2"]'
           fi
+
+          # Build trixie include list for v2 based on selected PHP versions
+          INCLUDES="[]"
+          for ver in $(echo "$PHP_VERSIONS" | jq -r '.[]'); do
+            for type in fpm cli apache; do
+              INCLUDES=$(echo "$INCLUDES" | jq -c ". + [{\"variant\":\"v2\",\"php-version\":\"$ver\",\"php-type\":\"$type\",\"php-base\":\"trixie\"}]")
+            done
+          done
+
+          MATRIX=$(jq -n -c \
+            --argjson versions "$PHP_VERSIONS" \
+            --argjson includes "$INCLUDES" \
+            '{
+              "variant": ["v1","v2"],
+              "php-version": $versions,
+              "php-type": ["fpm","cli","apache"],
+              "php-base": ["alpine","bookworm"],
+              "exclude": [
+                {"php-type":"apache","php-base":"alpine"},
+                {"variant":"v2","php-base":"bookworm"}
+              ],
+              "include": $includes
+            }')
+
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
       - name: Get latest s6-overlay version
         id: s6
         run: |
-          S6_OVERLAY_VERSION="$(curl -s https://api.github.com/repos/just-containers/s6-overlay/releases/latest | jq -r .tag_name)"
+          set -euo pipefail
+          RESPONSE="$(curl -fSLs \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            https://api.github.com/repos/just-containers/s6-overlay/releases/latest)"
+          S6_OVERLAY_VERSION="$(echo "$RESPONSE" | jq -r .tag_name)"
+          if [ -z "$S6_OVERLAY_VERSION" ] || [ "$S6_OVERLAY_VERSION" = "null" ]; then
+            echo "::error::Failed to determine s6-overlay version"
+            exit 1
+          fi
           echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
           echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
 
@@ -58,53 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        variant: [v1, v2]
-        php-version: ${{ fromJson(needs.setup.outputs.php-versions) }}
-        php-type: [fpm, cli, apache]
-        php-base: [alpine, bookworm]
-        exclude:
-          - php-type: apache
-            php-base: alpine
-          - variant: v2
-            php-base: bookworm
-        include:
-          - variant: v2
-            php-version: '8.4'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.4'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.4'
-            php-type: apache
-            php-base: trixie
-          - variant: v2
-            php-version: '8.3'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.3'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.3'
-            php-type: apache
-            php-base: trixie
-          - variant: v2
-            php-version: '8.2'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.2'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.2'
-            php-type: apache
-            php-base: trixie
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     
     name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
     
@@ -150,7 +137,7 @@ jobs:
             VERSION=${{ steps.vars.outputs.VERSION }}
             PHPVERSION=${{ matrix.php-version }}
             BASEOS=${{ matrix.php-base }}
-            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6-version }}
+            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6_version }}
             BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
             VCS_REF=${{ github.sha }}
           tags: test-${{ steps.vars.outputs.TAG }}
@@ -434,7 +421,7 @@ jobs:
             VERSION=${{ steps.vars.outputs.VERSION }}
             PHPVERSION=${{ matrix.php-version }}
             BASEOS=${{ matrix.php-base }}
-            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6-version }}
+            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6_version }}
             BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
             VCS_REF=${{ github.sha }}
           tags: |
