@@ -138,7 +138,6 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
                 case $ATTEMPT in \
                     1) SLEEP_TIME=5 ;; \
                     2) SLEEP_TIME=10 ;; \
-                    3) SLEEP_TIME=20 ;; \
                 esac; \
                 echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
                 sleep $SLEEP_TIME; \
@@ -183,7 +182,6 @@ RUN if [ "$BASEOS" = "trixie" ] || [ "$BASEOS" = "bookworm" ]; then \
                 case $ATTEMPT in \
                     1) SLEEP_TIME=5 ;; \
                     2) SLEEP_TIME=10 ;; \
-                    3) SLEEP_TIME=20 ;; \
                 esac; \
                 echo "Download attempt $ATTEMPT failed, retrying in ${SLEEP_TIME}s..."; \
                 sleep $SLEEP_TIME; \

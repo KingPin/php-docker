@@ -156,9 +156,11 @@ We maintain **two image variants** to support both existing users and modern use
 ✅ Proper PID 1 and process supervision (s6)
 ✅ Safe for running FPM + sidecar processes (e.g., cron, queue workers)
 ✅ Environment-based PHP config at runtime
-✅ Non-root user (appuser, UID 1000) by default
+✅ Includes non-root user (`appuser`, UID 1000) for running your application
 ✅ Easier to add background services and health checks
 ✅ Handles container signals properly
+
+> The container entrypoint runs as root (required for s6-overlay as PID 1), but a non-root `appuser` is pre-created. To run your app as this user, use `--user 1000:1000` or configure your orchestrator's security context.
 
 **Cons:**
 
@@ -208,7 +210,7 @@ For more details, see [docs/ci.md](docs/ci.md).
 
 These images are designed with security in mind:
 
-- **Non-root User (v2)**: v2 containers include a non-root `appuser` (UID 1000). v1 images run as the base PHP image default (root)
+- **Non-root User (v2)**: v2 images include a pre-created `appuser` (UID 1000) for running your application. The entrypoint runs as root for s6-overlay, but your app can run as appuser via `--user 1000:1000`. v1 images run as the base PHP image default (root)
 - **Limited Permissions (v2)**: `/var/www/html` directory has appropriate ownership and permissions
 - **Security Updates**: Images are regularly scanned for vulnerabilities via Trivy
 
