@@ -17,7 +17,7 @@ updates:
           - "docker/*"
       security-actions:
         patterns:
-          - "aquasecurity/*"
+          - "aquasecurity/trivy-action"
           - "github/codeql-action*"
       github-actions:
         patterns:
