@@ -4,4 +4,24 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker-actions:
+        patterns:
+          - "docker/*"
+      security-actions:
+        patterns:
+          - "aquasecurity/trivy-action"
+          - "github/codeql-action*"
+      github-actions:
+        patterns:
+          - "actions/*"
+          - "gautamkrishnar/*"
+          - "gaurav-nelson/*"
+          - "DavidAnson/*"
