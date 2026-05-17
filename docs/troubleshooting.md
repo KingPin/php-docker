@@ -18,10 +18,10 @@ Common issues and solutions for PHP Docker images (v1 and v2).
 For CLI variants, provide a command:
 ```bash
 # Keep container running
-docker run -d kingpin/php-docker:8.3-cli-alpine tail -f /dev/null
+docker run -d kingpin/php-docker:8.5-cli-alpine tail -f /dev/null
 
 # Or run a long-running script
-docker run -d kingpin/php-docker:8.3-cli-alpine php worker.php
+docker run -d kingpin/php-docker:8.5-cli-alpine php worker.php
 ```
 
 For FPM variants, check logs:
@@ -42,7 +42,7 @@ id -u  # Usually 1000
 # Run with matching UID
 docker run -u $(id -u):$(id -g) \
   -v $(pwd):/app \
-  kingpin/php-docker:8.3-cli-alpine php script.php
+  kingpin/php-docker:8.5-cli-alpine php script.php
 ```
 
 Or change ownership of mounted directory:
@@ -55,7 +55,7 @@ For docker-compose:
 ```yaml
 services:
   php:
-    image: kingpin/php-docker:8.3-fpm-alpine-v2
+    image: kingpin/php-docker:8.5-fpm-alpine-v2
     user: "1000:1000"  # Match your host UID:GID
     volumes:
       - ./src:/var/www/html
@@ -69,10 +69,10 @@ services:
 
 ```bash
 # List installed extensions
-docker run --rm kingpin/php-docker:8.3-cli-alpine php -m
+docker run --rm kingpin/php-docker:8.5-cli-alpine php -m
 
 # If missing, create custom Dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine-v2
+FROM kingpin/php-docker:8.5-fpm-alpine-v2
 RUN install-php-extensions swoole pcntl
 ```
 
@@ -90,7 +90,7 @@ Common extensions not included by default:
 
 ```bash
 # Via environment variable
-docker run -e PHP_MEMORY_LIMIT=1G kingpin/php-docker:8.3-cli-alpine php script.php
+docker run -e PHP_MEMORY_LIMIT=1G kingpin/php-docker:8.5-cli-alpine php script.php
 
 # Or with docker-compose
 services:
@@ -113,7 +113,7 @@ php -d memory_limit=1G script.php
 1. **Check OPcache settings:**
 ```bash
 docker run -e PHP_OPCACHE_MEMORY_CONSUMPTION=256 \
-  kingpin/php-docker:8.3-fpm-alpine-v2
+  kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 1. **Enable JIT (PHP 8.0+):**
@@ -126,13 +126,13 @@ opcache.jit=1255
 1. **Use Alpine for smaller footprint:**
 ```bash
 # Alpine is lighter than Bookworm
-docker pull kingpin/php-docker:8.3-fpm-alpine-v2
+docker pull kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 1. **Profile your code:**
 ```bash
 # Install xdebug for profiling
-FROM kingpin/php-docker:8.3-fpm-alpine-v2
+FROM kingpin/php-docker:8.5-fpm-alpine-v2
 RUN install-php-extensions xdebug
 ```
 
@@ -180,16 +180,16 @@ services:
 
 ```bash
 # Wrong - v1 tag (no s6-overlay)
-docker run kingpin/php-docker:8.3-fpm-alpine
+docker run kingpin/php-docker:8.5-fpm-alpine
 
 # Correct - v2 tag (has s6-overlay)
-docker run kingpin/php-docker:8.3-fpm-alpine-v2
+docker run kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 If building custom images:
 ```dockerfile
 # Ensure base image is v2
-FROM kingpin/php-docker:8.3-fpm-alpine-v2  # Note the -v2 suffix
+FROM kingpin/php-docker:8.5-fpm-alpine-v2  # Note the -v2 suffix
 ```
 
 ### Custom Init Scripts Not Running (v2)
@@ -199,7 +199,7 @@ FROM kingpin/php-docker:8.3-fpm-alpine-v2  # Note the -v2 suffix
 **Solution:** v2 uses s6-overlay's init system. Place scripts correctly:
 
 ```dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine-v2
+FROM kingpin/php-docker:8.5-fpm-alpine-v2
 
 # For one-time initialization
 COPY my-init.sh /etc/cont-init.d/99-my-init
@@ -238,7 +238,7 @@ chmod +x s6-services/worker/run
 
 In Dockerfile:
 ```dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine-v2
+FROM kingpin/php-docker:8.5-fpm-alpine-v2
 COPY s6-services/ /etc/services.d/
 ```
 
@@ -252,7 +252,7 @@ COPY s6-services/ /etc/services.d/
 
 1. **Check network connectivity:**
 ```bash
-docker run --rm kingpin/php-docker:8.3-cli-alpine ping -c 3 db-host
+docker run --rm kingpin/php-docker:8.5-cli-alpine ping -c 3 db-host
 ```
 
 1. **Verify database host:**
@@ -294,7 +294,7 @@ sudo lsof -i :9000
 sudo netstat -tulpn | grep 9000
 
 # Use different port
-docker run -p 9001:9000 kingpin/php-docker:8.3-fpm-alpine-v2
+docker run -p 9001:9000 kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 ## Extension-Specific Issues
@@ -309,10 +309,10 @@ docker run -p 9001:9000 kingpin/php-docker:8.3-fpm-alpine-v2
 
 ```bash
 # Check GD support
-docker run --rm kingpin/php-docker:8.3-cli-alpine php -r "print_r(gd_info());"
+docker run --rm kingpin/php-docker:8.5-cli-alpine php -r "print_r(gd_info());"
 
 # Use bookworm if more format support needed
-docker run --rm kingpin/php-docker:8.3-cli-bookworm php -r "print_r(gd_info());"
+docker run --rm kingpin/php-docker:8.5-cli-bookworm php -r "print_r(gd_info());"
 ```
 
 ### Redis Extension Not Working
@@ -321,14 +321,14 @@ docker run --rm kingpin/php-docker:8.3-cli-bookworm php -r "print_r(gd_info());"
 
 **Verify extension is loaded:**
 ```bash
-docker run --rm kingpin/php-docker:8.3-cli-alpine php -m | grep redis
+docker run --rm kingpin/php-docker:8.5-cli-alpine php -m | grep redis
 ```
 
 If loaded but still not working, check Redis server connection:
 ```bash
 # Test Redis connectivity
 docker run --rm --link redis:redis \
-  kingpin/php-docker:8.3-cli-alpine \
+  kingpin/php-docker:8.5-cli-alpine \
   php -r "var_dump((new Redis())->connect('redis', 6379));"
 ```
 
@@ -339,24 +339,24 @@ docker run --rm --link redis:redis \
 For v2 images, enable s6-overlay debug output:
 
 ```bash
-docker run -e S6_VERBOSITY=2 kingpin/php-docker:8.3-fpm-alpine-v2
+docker run -e S6_VERBOSITY=2 kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 ### Check PHP Configuration
 
 ```bash
 # View all PHP settings
-docker run --rm kingpin/php-docker:8.3-cli-alpine php -i
+docker run --rm kingpin/php-docker:8.5-cli-alpine php -i
 
 # Check specific setting
-docker run --rm kingpin/php-docker:8.3-cli-alpine \
+docker run --rm kingpin/php-docker:8.5-cli-alpine \
   php -r "echo ini_get('memory_limit');"
 
 # List loaded extensions
-docker run --rm kingpin/php-docker:8.3-cli-alpine php -m
+docker run --rm kingpin/php-docker:8.5-cli-alpine php -m
 
 # View php.ini location
-docker run --rm kingpin/php-docker:8.3-cli-alpine php --ini
+docker run --rm kingpin/php-docker:8.5-cli-alpine php --ini
 ```
 
 ### Interactive Shell Access
@@ -368,7 +368,7 @@ Enter running container for debugging:
 docker exec -it <container-id> sh
 
 # Or start container with shell
-docker run --rm -it kingpin/php-docker:8.3-cli-alpine sh
+docker run --rm -it kingpin/php-docker:8.5-cli-alpine sh
 ```
 
 ### Container Resource Limits
@@ -394,7 +394,7 @@ Enable PHP error display (development only):
 docker run \
   -e PHP_DISPLAY_ERRORS=On \
   -e PHP_ERROR_REPORTING=E_ALL \
-  kingpin/php-docker:8.3-fpm-alpine-v2
+  kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 ## Getting More Help
@@ -404,7 +404,7 @@ If issues persist:
 1. **Check GitHub Issues:** [github.com/kingpin/php-docker/issues](https://github.com/kingpin/php-docker/issues)
 2. **Review s6-overlay docs:** [github.com/just-containers/s6-overlay](https://github.com/just-containers/s6-overlay)
 3. **Open a new issue with:**
-   - Image tag used (e.g., `8.3-fpm-alpine-v2`)
+   - Image tag used (e.g., `8.5-fpm-alpine-v2`)
    - Full error message and logs
    - Minimal reproduction case (docker-compose.yml or Dockerfile)
    - Steps to reproduce
@@ -415,7 +415,7 @@ When reporting bugs, include:
 
 ```bash
 # Image information
-docker inspect kingpin/php-docker:8.3-fpm-alpine-v2 | grep -A 5 "Created"
+docker inspect kingpin/php-docker:8.5-fpm-alpine-v2 | grep -A 5 "Created"
 
 # Container logs
 docker logs <container-id> 2>&1

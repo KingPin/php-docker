@@ -19,9 +19,9 @@ All v2 Debian images now use Trixie as the base, with multiple compatible tags:
 
 ```bash
 # These all reference the SAME trixie-built image:
-kingpin/php-docker:8.3-fpm-trixie-v2      # Explicit trixie tag
-kingpin/php-docker:8.3-fpm-bookworm-v2    # Backward-compatible alias
-kingpin/php-docker:8.3-fpm-bullseye-v2    # Legacy compatibility alias
+kingpin/php-docker:8.5-fpm-trixie-v2      # Explicit trixie tag
+kingpin/php-docker:8.5-fpm-bookworm-v2    # Backward-compatible alias
+kingpin/php-docker:8.5-fpm-bullseye-v2    # Legacy compatibility alias
 ```
 
 ### Why This Change?
@@ -82,7 +82,7 @@ If you encounter issues:
 2. **Use v1 images** (still on Bookworm):
    ```bash
    # v1 images remain on Debian Bookworm
-   docker pull kingpin/php-docker:8.3-fpm-bookworm
+   docker pull kingpin/php-docker:8.5-fpm-bookworm
    ```
 
 3. **Report the issue**:
@@ -111,7 +111,7 @@ A: No current plans. v1 remains on Bookworm for maximum stability and compatibil
 
 ---
 
-> **ℹ️ Note on Deprecated Versions**: PHP 7.x and 8.1 are no longer actively built. If you're using these versions, please also review the [deprecated images guide](deprecated-images.md) for upgrade paths to PHP 8.2 or 8.3.
+> **ℹ️ Note on Deprecated Versions**: PHP 7.x and 8.1 are no longer actively built. If you're using these versions, please also review the [deprecated images guide](deprecated-images.md) for upgrade paths to PHP 8.2 or newer.
 
 ## Should You Migrate?
 
@@ -166,11 +166,11 @@ Start by testing v2 images in development or staging:
 
 ```bash
 # Pull v2 image
-docker pull kingpin/php-docker:8.3-fpm-alpine-v2
+docker pull kingpin/php-docker:8.5-fpm-alpine-v2
 
 # Test your application
 docker run --rm -v $(pwd):/var/www/html \
-  kingpin/php-docker:8.3-fpm-alpine-v2 php -v
+  kingpin/php-docker:8.5-fpm-alpine-v2 php -v
 ```
 
 ### Step 2: Update docker-compose.yml
@@ -181,14 +181,14 @@ Change image tags from v1 to v2:
 # Before (v1)
 services:
   php-fpm:
-    image: kingpin/php-docker:8.3-fpm-alpine
+    image: kingpin/php-docker:8.5-fpm-alpine
     volumes:
       - ./src:/var/www/html
 
 # After (v2)
 services:
   php-fpm:
-    image: kingpin/php-docker:8.3-fpm-alpine-v2
+    image: kingpin/php-docker:8.5-fpm-alpine-v2
     volumes:
       - ./src:/var/www/html
 ```
@@ -216,11 +216,11 @@ Both v1 and v2 use the same directory structure and permissions, but verify:
 
 ```bash
 # Check directory permissions
-docker run --rm kingpin/php-docker:8.3-fpm-alpine-v2 \
+docker run --rm kingpin/php-docker:8.5-fpm-alpine-v2 \
   ls -la /var/www/html /tmp
 
 # Verify PHP configuration
-docker run --rm kingpin/php-docker:8.3-fpm-alpine-v2 \
+docker run --rm kingpin/php-docker:8.5-fpm-alpine-v2 \
   php --ini
 ```
 
@@ -270,7 +270,7 @@ All environment variables from v1 work identically in v2:
 # These work the same in both v1 and v2
 docker run -e PHP_MEMORY_LIMIT=512M \
   -e PHP_MAX_EXECUTION_TIME=600 \
-  kingpin/php-docker:8.3-fpm-alpine-v2
+  kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 ### Volume Mounts
@@ -289,7 +289,7 @@ All pre-installed extensions are identical between v1 and v2:
 
 ```bash
 # Same extensions available
-docker run --rm kingpin/php-docker:8.3-cli-alpine-v2 php -m
+docker run --rm kingpin/php-docker:8.5-cli-alpine-v2 php -m
 ```
 
 ### User and Permissions
@@ -298,7 +298,7 @@ Both versions run as `appuser` (UID 1000) by default:
 
 ```bash
 # Same user behavior
-docker run --rm kingpin/php-docker:8.3-fpm-alpine-v2 whoami
+docker run --rm kingpin/php-docker:8.5-fpm-alpine-v2 whoami
 # Output: appuser
 ```
 
@@ -312,10 +312,10 @@ docker run --rm kingpin/php-docker:8.3-fpm-alpine-v2 whoami
 
 ```bash
 # Don't do this with v2:
-docker run --entrypoint /bin/sh kingpin/php-docker:8.3-fpm-alpine-v2
+docker run --entrypoint /bin/sh kingpin/php-docker:8.5-fpm-alpine-v2
 
 # Instead, use CMD:
-docker run --rm kingpin/php-docker:8.3-fpm-alpine-v2 sh -c "php -v"
+docker run --rm kingpin/php-docker:8.5-fpm-alpine-v2 sh -c "php -v"
 ```
 
 ### Issue: Custom Scripts Not Running
@@ -329,7 +329,7 @@ docker run --rm kingpin/php-docker:8.3-fpm-alpine-v2 sh -c "php -v"
 Example Dockerfile:
 
 ```dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine-v2
+FROM kingpin/php-docker:8.5-fpm-alpine-v2
 
 # Add init script
 COPY my-init-script.sh /etc/cont-init.d/99-my-init
@@ -373,7 +373,7 @@ chmod +x s6-services/myworker/run
 Then in your Dockerfile:
 
 ```dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine-v2
+FROM kingpin/php-docker:8.5-fpm-alpine-v2
 COPY s6-services/ /etc/services.d/
 ```
 
@@ -412,7 +412,7 @@ If you encounter issues, rolling back is simple:
 # Change tag back to v1
 services:
   php-fpm:
-    image: kingpin/php-docker:8.3-fpm-alpine  # Remove -v2 suffix
+    image: kingpin/php-docker:8.5-fpm-alpine  # Remove -v2 suffix
 ```
 
 Then redeploy:

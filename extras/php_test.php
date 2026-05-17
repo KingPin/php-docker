@@ -25,29 +25,29 @@
  * Usage Examples (using ghcr.io/kingpin/php-docker images):
  *
  * 1. CLI (Alpine):
- * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-cli-alpine php /app/php_test.php
+ * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-cli-alpine php /app/php_test.php
  *
  * 2. CLI (v1 - Debian Bookworm):
- * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-cli-bookworm php /app/php_test.php
+ * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-cli-bookworm php /app/php_test.php
  *
  * 3. CLI (v2 - Debian Trixie with s6-overlay):
- * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-cli-trixie-v2 php /app/php_test.php
+ * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-cli-trixie-v2 php /app/php_test.php
  * # Note: :bookworm-v2 also works (points to same Trixie-built image)
  *
  * 4. Web (Apache v1):
- * docker run --rm -d -p 8080:80 -v "$(pwd)/php_test.php:/var/www/html/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-apache-bookworm
+ * docker run --rm -d -p 8080:80 -v "$(pwd)/php_test.php:/var/www/html/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-apache-bookworm
  * # Then access: http://localhost:8080/php_test.php
  *
  * 5. Web (FPM v2 - via CLI to check environment):
  * # Note: Testing FPM properly requires a web server (like Nginx) configured to talk to it.
  * # This example just runs the CLI binary *inside* the FPM container to check extensions.
- * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-fpm-trixie-v2 php /app/php_test.php
+ * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-fpm-trixie-v2 php /app/php_test.php
  *
  * 6. CI/CD (Example assertion - v1):
- * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-cli-bookworm php /app/php_test.php | grep "SAPI: cli"
+ * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-cli-bookworm php /app/php_test.php | grep "SAPI: cli"
  *
  * 7. CI/CD (Example assertion - v2 with s6 check):
- * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.3-cli-trixie-v2 php /app/php_test.php | grep "s6-overlay.*Detected"
+ * docker run --rm -v "$(pwd)/php_test.php:/app/php_test.php:ro" ghcr.io/kingpin/php-docker:8.5-cli-trixie-v2 php /app/php_test.php | grep "s6-overlay.*Detected"
  *
  * # Example with an existing container
  * docker exec <container_name> php /path/to/php_test.php

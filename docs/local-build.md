@@ -32,20 +32,20 @@ The repository includes a helper script for building images locally.
 
 ```bash
 # Build v1 variant
-./test-build.sh v1 8.3-fpm-alpine
+./test-build.sh v1 8.5-fpm-alpine
 
 # Build v2 variant
-./test-build.sh v2 8.3-fpm-alpine
+./test-build.sh v2 8.5-fpm-alpine
 
 # Build both variants
-./test-build.sh both 8.3-fpm-alpine
+./test-build.sh both 8.5-fpm-alpine
 ```
 
 ### How It Works
 
 The script automatically:
-- Parses the tag (e.g., `8.3-fpm-alpine`) to extract:
-  - PHP version: `8.3`
+- Parses the tag (e.g., `8.5-fpm-alpine`) to extract:
+  - PHP version: `8.5`
   - PHP type: `fpm`
   - Base OS: `alpine`
 - Passes these as build arguments
@@ -58,10 +58,10 @@ The script automatically:
 # Build different PHP versions
 ./test-build.sh v2 8.1-cli-alpine
 ./test-build.sh v2 8.2-fpm-bookworm
-./test-build.sh v2 8.3-apache-bookworm
+./test-build.sh v2 8.5-apache-bookworm
 
 # Build both v1 and v2
-./test-build.sh both 8.3-cli-alpine
+./test-build.sh both 8.5-cli-alpine
 ```
 
 ### Testing Built Images
@@ -70,16 +70,16 @@ After building, test your images:
 
 ```bash
 # Check PHP version
-docker run --rm php-docker:8.3-fpm-alpine-v2 php -v
+docker run --rm php-docker:8.5-fpm-alpine-v2 php -v
 
 # List extensions
-docker run --rm php-docker:8.3-fpm-alpine-v2 php -m
+docker run --rm php-docker:8.5-fpm-alpine-v2 php -m
 
 # Check s6-overlay (v2 only)
-docker run --rm php-docker:8.3-fpm-alpine-v2 ls -la /etc/s6-overlay
+docker run --rm php-docker:8.5-fpm-alpine-v2 ls -la /etc/s6-overlay
 
 # Interactive shell
-docker run --rm -it php-docker:8.3-cli-alpine-v2 sh
+docker run --rm -it php-docker:8.5-cli-alpine-v2 sh
 ```
 
 ## Manual Building
@@ -91,10 +91,10 @@ v1 images use standard Docker build:
 ```bash
 docker build \
   -f Dockerfile.v1 \
-  --build-arg VERSION=8.3-fpm-alpine \
-  --build-arg PHPVERSION=8.3 \
+  --build-arg VERSION=8.5-fpm-alpine \
+  --build-arg PHPVERSION=8.5 \
   --build-arg BASEOS=alpine \
-  -t php-docker:8.3-fpm-alpine \
+  -t php-docker:8.5-fpm-alpine \
   .
 ```
 
@@ -106,20 +106,20 @@ v2 images require BuildKit:
 # Option 1: Environment variable
 DOCKER_BUILDKIT=1 docker build \
   -f Dockerfile.v2 \
-  --build-arg VERSION=8.3-fpm-alpine \
-  --build-arg PHPVERSION=8.3 \
+  --build-arg VERSION=8.5-fpm-alpine \
+  --build-arg PHPVERSION=8.5 \
   --build-arg BASEOS=alpine \
-  -t php-docker:8.3-fpm-alpine-v2 \
+  -t php-docker:8.5-fpm-alpine-v2 \
   .
 
 # Option 2: Using buildx
 docker buildx build \
   -f Dockerfile.v2 \
-  --build-arg VERSION=8.3-fpm-alpine \
-  --build-arg PHPVERSION=8.3 \
+  --build-arg VERSION=8.5-fpm-alpine \
+  --build-arg PHPVERSION=8.5 \
   --build-arg BASEOS=alpine \
   --load \
-  -t php-docker:8.3-fpm-alpine-v2 \
+  -t php-docker:8.5-fpm-alpine-v2 \
   .
 ```
 
@@ -129,8 +129,8 @@ Both Dockerfile.v1 and Dockerfile.v2 accept these build arguments:
 
 | Argument | Description | Example |
 |----------|-------------|---------|
-| `VERSION` | Full version string | `8.3-fpm-alpine` |
-| `PHPVERSION` | PHP version only | `8.3` |
+| `VERSION` | Full version string | `8.5-fpm-alpine` |
+| `PHPVERSION` | PHP version only | `8.5` |
 | `BASEOS` | Base OS | `alpine` or `bookworm` |
 
 ## Running Smoke Tests Locally
@@ -138,7 +138,7 @@ Both Dockerfile.v1 and Dockerfile.v2 accept these build arguments:
 ### Basic Smoke Tests
 
 ```bash
-IMAGE="php-docker:8.3-fpm-alpine-v2"
+IMAGE="php-docker:8.5-fpm-alpine-v2"
 
 # Test 1: PHP version
 docker run --rm $IMAGE php -v
@@ -157,7 +157,7 @@ docker run --rm $IMAGE sh -c "test -w /var/www && echo '/var/www writable'"
 ### v2-Specific Tests
 
 ```bash
-IMAGE="php-docker:8.3-fpm-alpine-v2"
+IMAGE="php-docker:8.5-fpm-alpine-v2"
 
 # Test 5: s6-overlay presence
 docker run --rm $IMAGE test -d /etc/s6-overlay && echo "s6-overlay present"
@@ -173,10 +173,10 @@ docker run --rm $IMAGE php -r "echo 'Running via s6 init';"
 
 ```bash
 # Test PHP-FPM
-docker run --rm php-docker:8.3-fpm-alpine-v2 php-fpm --version
+docker run --rm php-docker:8.5-fpm-alpine-v2 php-fpm --version
 
 # Start FPM and test
-docker run -d --name test-fpm -p 9000:9000 php-docker:8.3-fpm-alpine-v2
+docker run -d --name test-fpm -p 9000:9000 php-docker:8.5-fpm-alpine-v2
 sleep 2
 docker logs test-fpm
 docker stop test-fpm
@@ -195,10 +195,10 @@ docker buildx create --name multiarch --use
 docker buildx build \
   -f Dockerfile.v2 \
   --platform linux/amd64,linux/arm64,linux/arm/v7 \
-  --build-arg VERSION=8.3-fpm-alpine \
-  --build-arg PHPVERSION=8.3 \
+  --build-arg VERSION=8.5-fpm-alpine \
+  --build-arg PHPVERSION=8.5 \
   --build-arg BASEOS=alpine \
-  -t php-docker:8.3-fpm-alpine-v2 \
+  -t php-docker:8.5-fpm-alpine-v2 \
   .
 
 # Remove builder when done
@@ -212,7 +212,7 @@ docker buildx rm multiarch
 Create a custom Dockerfile:
 
 ```dockerfile
-FROM php-docker:8.3-fpm-alpine-v2
+FROM php-docker:8.5-fpm-alpine-v2
 
 # Install additional extensions
 RUN install-php-extensions \
@@ -247,7 +247,7 @@ chmod +x s6-services/worker/run
 
 Dockerfile:
 ```dockerfile
-FROM php-docker:8.3-fpm-alpine-v2
+FROM php-docker:8.5-fpm-alpine-v2
 COPY s6-services/ /etc/services.d/
 ```
 
@@ -266,13 +266,13 @@ COPY s6-services/ /etc/services.d/
 
 ```bash
 # Build both variants
-./test-build.sh both 8.3-fpm-alpine
+./test-build.sh both 8.5-fpm-alpine
 
 # Run quick tests
 for variant in "" "-v2"; do
-  echo "Testing php-docker:8.3-fpm-alpine$variant"
-  docker run --rm php-docker:8.3-fpm-alpine$variant php -v
-  docker run --rm php-docker:8.3-fpm-alpine$variant php -m | wc -l
+  echo "Testing php-docker:8.5-fpm-alpine$variant"
+  docker run --rm php-docker:8.5-fpm-alpine$variant php -v
+  docker run --rm php-docker:8.5-fpm-alpine$variant php -m | wc -l
 done
 ```
 

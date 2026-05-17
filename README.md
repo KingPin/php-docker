@@ -9,8 +9,8 @@ Multi-architecture PHP Docker images with extensive extensions for modern web de
 
 ## 🎯 Which Image Should I Use?
 
-**New projects or need process supervision?** → Use **v2** images (e.g., `8.3-fpm-alpine-v2`)  
-**Existing deployments or maximum compatibility?** → Use **v1** images (e.g., `8.3-fpm-alpine`)
+**New projects or need process supervision?** → Use **v2** images (e.g., `8.5-fpm-alpine-v2`)  
+**Existing deployments or maximum compatibility?** → Use **v1** images (e.g., `8.5-fpm-alpine`)
 
 See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 
@@ -75,7 +75,7 @@ The following environment variables are applied at container startup by the s6-o
 ### Example usage
 
 ```bash
-docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-docker:8.3-fpm-alpine-v2
+docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 ## 🚀 Quick Start
@@ -84,26 +84,26 @@ docker run -e PHP_MEMORY_LIMIT=512M -e PHP_MAX_EXECUTION_TIME=600 kingpin/php-do
 
 ```bash
 # Run PHP CLI
-docker run --rm kingpin/php-docker:8.3-cli-alpine php -v
+docker run --rm kingpin/php-docker:8.5-cli-alpine php -v
 
 # Run with your code mounted
-docker run --rm -v $(pwd):/app -w /app kingpin/php-docker:8.3-cli-alpine php script.php
+docker run --rm -v $(pwd):/app -w /app kingpin/php-docker:8.5-cli-alpine php script.php
 
 # Start PHP-FPM server
-docker run -d -p 9000:9000 -v $(pwd):/var/www/html kingpin/php-docker:8.3-fpm-alpine
+docker run -d -p 9000:9000 -v $(pwd):/var/www/html kingpin/php-docker:8.5-fpm-alpine
 ```
 
 ### v2 (Modern/Supervised)
 
 ```bash
 # Run PHP CLI with s6-overlay
-docker run --rm kingpin/php-docker:8.3-cli-alpine-v2 php -v
+docker run --rm kingpin/php-docker:8.5-cli-alpine-v2 php -v
 
 # Run with your code mounted
-docker run --rm -v $(pwd):/app -w /app kingpin/php-docker:8.3-cli-alpine-v2 php script.php
+docker run --rm -v $(pwd):/app -w /app kingpin/php-docker:8.5-cli-alpine-v2 php script.php
 
 # Start PHP-FPM with s6 supervision
-docker run -d -p 9000:9000 -v $(pwd):/var/www/html kingpin/php-docker:8.3-fpm-alpine-v2
+docker run -d -p 9000:9000 -v $(pwd):/var/www/html kingpin/php-docker:8.5-fpm-alpine-v2
 ```
 
 ## v1 vs v2 Comparison
@@ -218,27 +218,27 @@ These images are designed with security in mind:
 
 1. **Never run as root**: Keep the default non-root user or specify your own
    ```bash
-   docker run --user 1001:1001 kingpin/php-docker:8.3-fpm-alpine
+   docker run --user 1001:1001 kingpin/php-docker:8.5-fpm-alpine
    ```
 
 2. **Use read-only volumes when possible**
    ```bash
-   docker run -v $(pwd)/config:/app/config:ro kingpin/php-docker:8.3-cli-alpine
+   docker run -v $(pwd)/config:/app/config:ro kingpin/php-docker:8.5-cli-alpine
    ```
 
 3. **Limit capabilities**: Drop unnecessary capabilities
    ```bash
-   docker run --cap-drop ALL --cap-add NET_BIND_SERVICE kingpin/php-docker:8.3-apache-bookworm
+   docker run --cap-drop ALL --cap-add NET_BIND_SERVICE kingpin/php-docker:8.5-apache-bookworm
    ```
 
 4. **Set memory and CPU limits**
    ```bash
-   docker run --memory="256m" --cpus="0.5" kingpin/php-docker:8.3-fpm-alpine
+   docker run --memory="256m" --cpus="0.5" kingpin/php-docker:8.5-fpm-alpine
    ```
 
 5. **Use secrets management for sensitive data**
    ```bash
-   docker run --secret db_password kingpin/php-docker:8.3-cli-alpine
+   docker run --secret db_password kingpin/php-docker:8.5-cli-alpine
    ```
 
 6. **Regularly update images** to get the latest security patches
@@ -254,7 +254,7 @@ docker run \
   -e PHP_OPCACHE_MEMORY_CONSUMPTION=256 \
   -e PHP_OPCACHE_MAX_ACCELERATED_FILES=20000 \
   -e PHP_OPCACHE_INTERNED_STRINGS_BUFFER=32 \
-  kingpin/php-docker:8.3-fpm-alpine
+  kingpin/php-docker:8.5-fpm-alpine
 ```
 
 ### PHP-FPM Tuning (for FPM variants)
@@ -275,7 +275,7 @@ pm.max_requests = 500
 ```bash
 docker run \
   -e PHP_MEMORY_LIMIT=128M \
-  kingpin/php-docker:8.3-fpm-alpine
+  kingpin/php-docker:8.5-fpm-alpine
 ```
 
 ### JIT Configuration (PHP 8.0+)
@@ -309,8 +309,8 @@ All registries have identical image content and tags.
 
 ### Tag Format
 
-- **v1 images**: `{php-version}-{type}-{os}` (e.g., `8.3-fpm-alpine`)
-- **v2 images**: `{php-version}-{type}-{os}-v2` (e.g., `8.3-fpm-alpine-v2`)
+- **v1 images**: `{php-version}-{type}-{os}` (e.g., `8.5-fpm-alpine`)
+- **v2 images**: `{php-version}-{type}-{os}-v2` (e.g., `8.5-fpm-alpine-v2`)
 
 ### Current Supported Images
 
@@ -360,7 +360,7 @@ The following tags are deprecated and will not be built going forward, but remai
   - `8.1-fpm-bullseye`, `8.1-fpm-bookworm`, `8.1-fpm-alpine`
   - `8.1-apache-bullseye`, `8.1-apache-bookworm`
 
-> **Important:** These versions are deprecated. Please upgrade to PHP 8.2, 8.3, or 8.4 for security and performance.
+> **Important:** These versions are deprecated. Please upgrade to an actively-supported PHP version (8.2–8.5) for security and performance.
 
 ## 📊 Image Sizes
 
@@ -426,7 +426,7 @@ Approximate compressed sizes (vary by PHP version and platform):
 ### Basic usage with Docker
 
 ```bash
-docker run -d --name php-app kingpin/php-docker:8.3-cli-alpine php -v
+docker run -d --name php-app kingpin/php-docker:8.5-cli-alpine php -v
 ```
 
 ### With Docker Compose
@@ -434,7 +434,7 @@ docker run -d --name php-app kingpin/php-docker:8.3-cli-alpine php -v
 ```yaml
 services:
   php-fpm:
-    image: kingpin/php-docker:8.3-fpm-alpine
+    image: kingpin/php-docker:8.5-fpm-alpine
     volumes:
       - ./src:/var/www/html
     networks:
@@ -461,7 +461,7 @@ For detailed WordPress setup instructions, visit our [guide](https://sumguy.com/
 You can build custom images based on these by extending the Dockerfile:
 
 ```dockerfile
-FROM kingpin/php-docker:8.3-fpm-alpine
+FROM kingpin/php-docker:8.5-fpm-alpine
 
 # Add your custom configurations
 COPY custom-php.ini /usr/local/etc/php/conf.d/
@@ -485,7 +485,7 @@ The following PHP versions are **no longer actively built** but remain available
 - Available tags: `8.1-cli-alpine`, `8.1-fpm-alpine`, `8.1-apache-bookworm`, etc.
 
 **Migration Path:**
-- Upgrade to PHP 8.2 or 8.3 for continued security updates and new builds
+- Upgrade to an actively-supported PHP version (8.2–8.5) for continued security updates and new builds
 - See [migration guide](docs/migration.md) for upgrade assistance
 - Existing images will remain available in Docker Hub, GHCR, and Quay.io
 

@@ -2,9 +2,9 @@
 set -e
 
 # Usage: ./test-build.sh {v1|v2|both} <tag>
-# Example: ./test-build.sh v1 8.3-fpm-alpine
-# Example: ./test-build.sh v2 8.3-fpm-alpine  (builds as 8.3-fpm-alpine-v2)
-# Example: ./test-build.sh both 8.3-fpm-alpine
+# Example: ./test-build.sh v1 8.5-fpm-alpine
+# Example: ./test-build.sh v2 8.5-fpm-alpine  (builds as 8.5-fpm-alpine-v2)
+# Example: ./test-build.sh both 8.5-fpm-alpine
 
 IMAGE_NAME="php-docker"
 
@@ -13,20 +13,20 @@ show_usage() {
     echo ""
     echo "Arguments:"
     echo "  v1|v2|both  - Which Dockerfile variant(s) to build"
-    echo "  <tag>       - Base tag (e.g., 8.3-fpm-alpine or 8.1-cli-bookworm or 8.2-fpm-trixie)"
+    echo "  <tag>       - Base tag (e.g., 8.5-fpm-alpine or 8.2-cli-bookworm or 8.4-fpm-trixie)"
     echo ""
     echo "Examples:"
-    echo "  $0 v1 8.3-fpm-alpine           # Builds ${IMAGE_NAME}:8.3-fpm-alpine"
-    echo "  $0 v2 8.3-fpm-alpine           # Builds ${IMAGE_NAME}:8.3-fpm-alpine-v2"
+    echo "  $0 v1 8.5-fpm-alpine           # Builds ${IMAGE_NAME}:8.5-fpm-alpine"
+    echo "  $0 v2 8.5-fpm-alpine           # Builds ${IMAGE_NAME}:8.5-fpm-alpine-v2"
     echo "  $0 v2 8.2-fpm-trixie           # Builds ${IMAGE_NAME}:8.2-fpm-trixie-v2"
-    echo "  $0 both 8.3-fpm-alpine         # Builds both variants"
+    echo "  $0 both 8.5-fpm-alpine         # Builds both variants"
     exit 1
 }
 
 parse_tag() {
     local tag=$1
     
-    # Extract PHP version (e.g., 8.3, 8.1, 7)
+    # Extract PHP version (e.g., 8.5, 8.2, 7)
     local php_version=$(echo "$tag" | grep -oE '^[0-9]+(\.[0-9]+)?' || echo "")
     
     # Extract variant (fpm or cli)

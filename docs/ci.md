@@ -178,8 +178,8 @@ Published tags follow this format:
 **v2:** `{php-version}-{type}-{os}-v2`
 
 Examples:
-- `8.3-fpm-alpine` (v1)
-- `8.3-fpm-alpine-v2` (v2)
+- `8.5-fpm-alpine` (v1)
+- `8.5-fpm-alpine-v2` (v2)
 - `8.2-cli-bookworm` (v1)
 - `8.2-cli-bookworm-v2` (v2)
 
