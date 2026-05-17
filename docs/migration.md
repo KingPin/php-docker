@@ -18,11 +18,12 @@ v2 Debian-based images have migrated from **Debian Bookworm** to **Debian Trixie
 All v2 Debian images now use Trixie as the base, with multiple compatible tags:
 
 ```bash
-# These all reference the SAME trixie-built image:
+# These both reference the SAME trixie-built image:
 kingpin/php-docker:8.5-fpm-trixie-v2      # Explicit trixie tag
 kingpin/php-docker:8.5-fpm-bookworm-v2    # Backward-compatible alias
-kingpin/php-docker:8.5-fpm-bullseye-v2    # Legacy compatibility alias
 ```
+
+> **Note:** v2 only publishes `*-trixie-v2` and `*-bookworm-v2` aliases. No `*-bullseye-v2` aliases are created — projects pinned to a v1 bullseye tag should migrate to bookworm-v2 (or trixie-v2 directly).
 
 ### Why This Change?
 

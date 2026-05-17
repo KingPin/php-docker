@@ -41,7 +41,7 @@ matrix:
   - v2: s6-overlay validation
   - FPM: PHP-FPM functionality
 - Uses GitHub Actions cache for faster builds
-- Fails fast if any variant fails
+- Does **not** fail-fast: every variant runs even if one fails, so a single broken combination doesn't mask others (`strategy.fail-fast: false`)
 
 #### 2. publish
 
@@ -119,12 +119,12 @@ When you open a PR, CI will:
 
 ### Branch Testing
 
-Pushing to any branch (not just `main`) will:
-1. Trigger build-and-test job
-2. Run all smoke tests
-3. **Will NOT publish** images
+The `push` trigger is restricted to `main` — pushing to a feature branch does **not** by itself run CI. Non-main work is tested via:
 
-Only merging to `main` triggers publishing.
+1. **Pull requests**: open a PR against any branch; the PR fast-path matrix runs build-and-test (testing newest + oldest PHP only, currently 8.5 + 8.2)
+2. **`workflow_dispatch`**: manually trigger a run from the Actions tab on any ref
+
+Either path runs build-and-test but **will NOT publish** images. Only merging to `main` (via push or PR merge) triggers the publish job.
 
 ## Security Scanning
 
