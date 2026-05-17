@@ -29,8 +29,8 @@ parse_tag() {
     # Extract PHP version (e.g., 8.5, 8.2, 7)
     local php_version=$(echo "$tag" | grep -oE '^[0-9]+(\.[0-9]+)?' || echo "")
     
-    # Extract variant (fpm or cli)
-    local variant=$(echo "$tag" | grep -oE '(fpm|cli)' || echo "fpm")
+    # Extract variant (fpm, cli, or apache)
+    local variant=$(echo "$tag" | grep -oE '(fpm|cli|apache)' || echo "fpm")
     
     # Extract base OS (alpine, trixie, bookworm, bullseye)
     local baseos=$(echo "$tag" | grep -oE '(alpine|trixie|bookworm|bullseye)' || echo "alpine")
