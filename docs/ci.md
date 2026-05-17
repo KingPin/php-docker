@@ -21,14 +21,15 @@ The unified CI workflow handles both v1 and v2 variants in a single pipeline.
 
 #### 1. build-and-test
 
-Runs on every push and pull request:
+Runs on every push to `main`, pull request, weekly schedule, and `workflow_dispatch`:
 
 ```yaml
 matrix:
   variant: [v1, v2]
-  php-version: ['8.3', '8.1']
-  php-type: [fpm, cli]
-  php-base: [alpine, bookworm]
+  php-version: ['8.5', '8.4', '8.3', '8.2']  # PR fast-path: ['8.5', '8.2']
+  php-type: [fpm, cli, apache]
+  php-base: [alpine, bookworm]   # v2 uses trixie instead of bookworm
+  # apache+alpine excluded; v2/trixie added via include
 ```
 
 **What it does:**
@@ -49,9 +50,10 @@ Runs **only on `main` branch** after successful build-and-test:
 ```yaml
 matrix:
   variant: [v1, v2]
-  php-version: ['8.3', '8.2', '8.1', '7']
+  php-version: ['8.5', '8.4', '8.3', '8.2']
   php-type: [fpm, cli, apache]
-  php-base: [alpine, bookworm, bullseye]
+  php-base: [alpine, bookworm]   # v2 uses trixie instead of bookworm
+  # apache+alpine excluded; v2/trixie added via include
 ```
 
 **What it does:**
