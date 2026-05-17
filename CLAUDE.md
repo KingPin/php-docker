@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-architecture PHP Docker image builder. Two parallel Dockerfile variants (v1 and v2) produce images for PHP 8.2, 8.3, 8.4, 8.5 across alpine/bookworm (v1) and alpine/trixie (v2), with fpm and cli types. Published to Docker Hub, GHCR, and Quay.io.
 
+Deprecation policy: PHP versions are removed from the build matrix when upstream security support ends ([php.net schedule](https://www.php.net/supported-versions.php)). PHP 8.2 is scheduled for removal after 2026-12-31.
+
 ## Local Build Commands
 
 ```bash

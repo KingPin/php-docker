@@ -17,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 8.2, 8.3, 8.4, and 8.5 (actively built); PHP 7.x, 8.0, and 8.1 deprecated
+- **Multiple PHP Versions**: PHP 8.2, 8.3, 8.4, and 8.5 (actively built); PHP 7.x, 8.0, and 8.1 deprecated. PHP 8.2 is scheduled for removal after 2026-12-31 when upstream security support ends — see [deprecation schedule](#deprecation-schedule).
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (v1: Bookworm, v2: Trixie with Bookworm-compatible tags)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
@@ -340,6 +340,19 @@ Both v1 and v2 variants are available for all combinations below:
 | 8.2         | Apache | Bookworm  | `8.2-apache-bookworm`  | `8.2-apache-bookworm-v2`   |
 
 > **Note:** v1 Debian images use Bookworm. v2 Debian images use Trixie, with `:bookworm-v2` tags as compatibility aliases pointing to the same Trixie-built images.
+
+### Deprecation Schedule
+
+PHP versions are removed from the build matrix when upstream security support ends ([php.net schedule](https://www.php.net/supported-versions.php)). Existing image tags remain pullable from registries indefinitely; only **new** builds stop.
+
+| Version | Upstream security ends | Planned removal |
+|---------|------------------------|-----------------|
+| 8.2     | 2026-12-31             | After 2026-12-31 |
+| 8.3     | 2027-12-31             | After 2027-12-31 |
+| 8.4     | 2028-12-31             | After 2028-12-31 |
+| 8.5     | 2029-12-31             | After 2029-12-31 |
+
+If you're pinned to a `8.2-*` tag, plan to bump to 8.3 or newer before the end of 2026.
 
 ### Deprecated Tags (v1 only)
 

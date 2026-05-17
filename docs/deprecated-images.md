@@ -168,8 +168,22 @@ docker pull kingpin/php-docker:8.1-fpm-alpine
 ## Support Policy
 
 - **Active Builds**: PHP 8.2, 8.3, 8.4, 8.5 (receive regular updates)
+- **Scheduled for Deprecation**: PHP 8.2 — removed after 2026-12-31 when upstream security support ends
 - **Deprecated**: PHP 7.x and 8.1 (images frozen, no updates)
 - **Removed**: None (all previously published images remain available)
+
+### Upcoming Deprecations
+
+PHP versions are removed from the build matrix when [upstream security support](https://www.php.net/supported-versions.php) ends. Existing image tags remain pullable from registries indefinitely.
+
+| Version | Upstream security ends | Planned removal from matrix |
+|---------|------------------------|-----------------------------|
+| 8.2     | 2026-12-31             | After 2026-12-31            |
+| 8.3     | 2027-12-31             | After 2027-12-31            |
+| 8.4     | 2028-12-31             | After 2028-12-31            |
+| 8.5     | 2029-12-31             | After 2029-12-31            |
+
+**If you're pinned to `8.2-*` tags**, plan to migrate to 8.3 or newer before end of 2026. PHP 8.2 → 8.3 is generally a low-risk bump; review the [PHP 8.3 migration guide](https://www.php.net/manual/en/migration83.php).
 
 ## Image Digests (Last Published)
 
