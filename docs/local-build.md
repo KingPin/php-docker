@@ -32,13 +32,13 @@ The repository includes a helper script for building images locally.
 
 ```bash
 # Build v1 variant
-./test-build.sh v1 8.5-fpm-alpine
+./extras/test-build.sh v1 8.5-fpm-alpine
 
 # Build v2 variant
-./test-build.sh v2 8.5-fpm-alpine
+./extras/test-build.sh v2 8.5-fpm-alpine
 
 # Build both variants
-./test-build.sh both 8.5-fpm-alpine
+./extras/test-build.sh both 8.5-fpm-alpine
 ```
 
 ### How It Works
@@ -56,12 +56,12 @@ The script automatically:
 
 ```bash
 # Build different PHP versions
-./test-build.sh v2 8.1-cli-alpine
-./test-build.sh v2 8.2-fpm-bookworm
-./test-build.sh v2 8.5-apache-bookworm
+./extras/test-build.sh v2 8.5-cli-alpine
+./extras/test-build.sh v2 8.2-fpm-bookworm
+./extras/test-build.sh v2 8.5-apache-bookworm   # v2 Debian builds on trixie; bookworm-v2 is an alias
 
 # Build both v1 and v2
-./test-build.sh both 8.5-cli-alpine
+./extras/test-build.sh both 8.5-cli-alpine
 ```
 
 ### Testing Built Images
@@ -256,7 +256,7 @@ COPY s6-services/ /etc/services.d/
 ### Typical Development Cycle
 
 1. **Make changes** to Dockerfile.v1 or Dockerfile.v2
-2. **Build locally** using `test-build.sh`
+2. **Build locally** using `extras/test-build.sh`
 3. **Run smoke tests** to verify functionality
 4. **Test your application** with the new image
 5. **Commit changes** and push to GitHub
@@ -266,7 +266,7 @@ COPY s6-services/ /etc/services.d/
 
 ```bash
 # Build both variants
-./test-build.sh both 8.5-fpm-alpine
+./extras/test-build.sh both 8.5-fpm-alpine
 
 # Run quick tests
 for variant in "" "-v2"; do
