@@ -17,7 +17,7 @@ See [v1 vs v2 comparison](#v1-vs-v2-comparison) below for details.
 ## Features
 
 - **Multi-Architecture Support**: Works on `amd64`, `arm64/aarch64` and `arm32v7/armhf` platforms
-- **Multiple PHP Versions**: PHP 8.2, 8.3, and 8.4 (actively built); PHP 7.x, 8.0, and 8.1 deprecated
+- **Multiple PHP Versions**: PHP 8.2, 8.3, 8.4, and 8.5 (actively built); PHP 7.x, 8.0, and 8.1 deprecated
 - **Multiple Server Types**: CLI, FPM, and Apache
 - **Base OS Options**: Alpine (lightweight) and Debian (v1: Bookworm, v2: Trixie with Bookworm-compatible tags)
 - **Extensive Extensions**: 30+ PHP extensions pre-installed
@@ -318,6 +318,11 @@ Both v1 and v2 variants are available for all combinations below:
 
 | PHP Version | Type   | OS        | v1 Tag Example         | v2 Tag Example             |
 |-------------|--------|-----------|------------------------|----------------------------|
+| 8.5         | CLI    | Alpine    | `8.5-cli-alpine`       | `8.5-cli-alpine-v2`        |
+| 8.5         | CLI    | Bookworm  | `8.5-cli-bookworm`     | `8.5-cli-bookworm-v2`      |
+| 8.5         | FPM    | Alpine    | `8.5-fpm-alpine`       | `8.5-fpm-alpine-v2`        |
+| 8.5         | FPM    | Bookworm  | `8.5-fpm-bookworm`     | `8.5-fpm-bookworm-v2`      |
+| 8.5         | Apache | Bookworm  | `8.5-apache-bookworm`  | `8.5-apache-bookworm-v2`   |
 | 8.4         | CLI    | Alpine    | `8.4-cli-alpine`       | `8.4-cli-alpine-v2`        |
 | 8.4         | CLI    | Bookworm  | `8.4-cli-bookworm`     | `8.4-cli-bookworm-v2`      |
 | 8.4         | FPM    | Alpine    | `8.4-fpm-alpine`       | `8.4-fpm-alpine-v2`        |
