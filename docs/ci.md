@@ -70,7 +70,7 @@ matrix:
 To enable publishing, configure these GitHub repository secrets:
 
 | Secret | Description | Used For |
-|--------|-------------|----------|
+| -------- | ------------- | ---------- |
 | `DOCKERHUB_USERNAME` | Docker Hub username | Docker Hub login |
 | `DOCKERHUB_TOKEN` | Docker Hub access token | Docker Hub authentication |
 | `QUAY_USERNAME` | Quay.io username | Quay.io login |

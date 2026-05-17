@@ -61,7 +61,7 @@ If you're currently using:
 Key system library updates (time64 transition):
 
 | Library | Bookworm | Trixie |
-|---------|----------|--------|
+| --------- | ---------- | -------- |
 | libpng | `libpng16-16` | `libpng16-16t64` |
 | libmagickwand | `libmagickwand-6.q16-6` | `libmagickwand-6.q16-7t64` |
 | libvips | `libvips42` | `libvips42t64` |

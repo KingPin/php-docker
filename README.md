@@ -35,7 +35,7 @@ The following environment variables are applied at container startup by the s6-o
 ### Memory Settings
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `PHP_MEMORY_LIMIT` | `256M` | Maximum memory a script can consume |
 | `PHP_OPCACHE_MEMORY_CONSUMPTION` | `128` | OPCache memory consumption limit |
 | `PHP_OPCACHE_INTERNED_STRINGS_BUFFER` | `16` | OPCache interned strings buffer |
@@ -43,7 +43,7 @@ The following environment variables are applied at container startup by the s6-o
 ### Upload Settings
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `PHP_UPLOAD_MAX_FILESIZE` | `64M` | Maximum allowed size for uploaded files |
 | `PHP_POST_MAX_SIZE` | `64M` | Maximum size of POST data allowed |
 | `PHP_MAX_FILE_UPLOADS` | `20` | Maximum number of files allowed for upload |
@@ -51,14 +51,14 @@ The following environment variables are applied at container startup by the s6-o
 ### Execution Settings
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `PHP_MAX_EXECUTION_TIME` | `300` | Maximum execution time of scripts (seconds) |
 | `PHP_MAX_INPUT_VARS` | `1000` | Maximum input variables allowed |
 
 ### Error Handling
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `PHP_ERROR_REPORTING` | `E_ALL` | Error reporting level |
 | `PHP_DISPLAY_ERRORS` | `Off` | Display errors in output |
 | `PHP_LOG_ERRORS` | `On` | Log errors to error log |
@@ -66,7 +66,7 @@ The following environment variables are applied at container startup by the s6-o
 ### Other Settings
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| ---------- | --------- | ------------- |
 | `PHP_DATE_TIMEZONE` | `UTC` | Default timezone |
 | `PHP_SESSION_GC_MAXLIFETIME` | `1440` | Session garbage collection max lifetime |
 | `PHP_OPCACHE_MAX_ACCELERATED_FILES` | `10000` | OPCache maximum number of files |
@@ -345,8 +345,8 @@ Both v1 and v2 variants are available for all combinations below:
 
 PHP versions are removed from the build matrix when upstream security support ends ([php.net schedule](https://www.php.net/supported-versions.php)). Existing image tags remain pullable from registries indefinitely; only **new** builds stop.
 
-| Version | Upstream security ends | Planned removal |
-|---------|------------------------|-----------------|
+| Version | Upstream security ends | Planned removal  |
+|---------|------------------------|------------------|
 | 8.2     | 2026-12-31             | After 2026-12-31 |
 | 8.3     | 2027-12-31             | After 2027-12-31 |
 | 8.4     | 2028-12-31             | After 2028-12-31 |
