@@ -33,43 +33,58 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
+      test_matrix: ${{ steps.matrix.outputs.test_matrix }}
+      publish_matrix: ${{ steps.matrix.outputs.publish_matrix }}
       s6_version: ${{ steps.s6.outputs.version }}
     steps:
-      - name: Compute build matrix
+      - name: Compute build matrices
         id: matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PHP_VERSIONS='["8.5","8.2"]'
+          # The publish matrix is always the full set; the test matrix
+          # narrows the php-version axis on PRs so feedback stays fast.
+          FULL_VERSIONS='["8.5","8.4","8.3","8.2"]'
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            TEST_VERSIONS='["8.5","8.2"]'
             echo "::notice::PR detected — testing PHP 8.5 + 8.2 only (skipping 8.4 and 8.3)"
           else
-            PHP_VERSIONS='["8.5","8.4","8.3","8.2"]'
+            TEST_VERSIONS="$FULL_VERSIONS"
           fi
 
-          # Build trixie include list for v2 based on selected PHP versions
-          INCLUDES="[]"
-          for ver in $(echo "$PHP_VERSIONS" | jq -r '.[]'); do
-            for type in fpm cli apache; do
-              INCLUDES=$(echo "$INCLUDES" | jq -c ". + [{\"variant\":\"v2\",\"php-version\":\"$ver\",\"php-type\":\"$type\",\"php-base\":\"trixie\"}]")
+          # build_matrix VERSIONS_JSON → matrix JSON string. variant × php-version
+          # × php-type × php-base, minus apache-on-alpine and v2-on-bookworm,
+          # plus an explicit v2/trixie include list (one per type).
+          build_matrix() {
+            local versions="$1"
+            local includes="[]"
+            for ver in $(echo "$versions" | jq -r '.[]'); do
+              for type in fpm cli apache; do
+                includes=$(echo "$includes" | jq -c \
+                  ". + [{\"variant\":\"v2\",\"php-version\":\"$ver\",\"php-type\":\"$type\",\"php-base\":\"trixie\"}]")
+              done
             done
-          done
+            jq -n -c \
+              --argjson versions "$versions" \
+              --argjson includes "$includes" \
+              '{
+                "variant": ["v1","v2"],
+                "php-version": $versions,
+                "php-type": ["fpm","cli","apache"],
+                "php-base": ["alpine","bookworm"],
+                "exclude": [
+                  {"php-type":"apache","php-base":"alpine"},
+                  {"variant":"v2","php-base":"bookworm"}
+                ],
+                "include": $includes
+              }'
+          }
 
-          MATRIX=$(jq -n -c \
-            --argjson versions "$PHP_VERSIONS" \
-            --argjson includes "$INCLUDES" \
-            '{
-              "variant": ["v1","v2"],
-              "php-version": $versions,
-              "php-type": ["fpm","cli","apache"],
-              "php-base": ["alpine","bookworm"],
-              "exclude": [
-                {"php-type":"apache","php-base":"alpine"},
-                {"variant":"v2","php-base":"bookworm"}
-              ],
-              "include": $includes
-            }')
+          TEST_MATRIX=$(build_matrix "$TEST_VERSIONS")
+          PUBLISH_MATRIX=$(build_matrix "$FULL_VERSIONS")
 
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "test_matrix=$TEST_MATRIX" >> $GITHUB_OUTPUT
+          echo "publish_matrix=$PUBLISH_MATRIX" >> $GITHUB_OUTPUT
 
       - name: Get latest s6-overlay version
         id: s6
@@ -91,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.setup.outputs.test_matrix) }}
     
     name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
     
@@ -299,67 +314,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        variant: [v1, v2]
-        php-version: ['8.5', '8.4', '8.3', '8.2']
-        php-type: [fpm, cli, apache]
-        php-base: [alpine, bookworm]
-        exclude:
-          - php-type: apache
-            php-base: alpine
-          # v2 uses trixie as the Debian base; bookworm retained for v1
-          - variant: v2
-            php-base: bookworm
-        include:
-          # v2 builds on trixie for Debian images
-          - variant: v2
-            php-version: '8.5'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.5'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.5'
-            php-type: apache
-            php-base: trixie
-          - variant: v2
-            php-version: '8.4'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.4'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.4'
-            php-type: apache
-            php-base: trixie
-          - variant: v2
-            php-version: '8.3'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.3'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.3'
-            php-type: apache
-            php-base: trixie
-          - variant: v2
-            php-version: '8.2'
-            php-type: fpm
-            php-base: trixie
-          - variant: v2
-            php-version: '8.2'
-            php-type: cli
-            php-base: trixie
-          - variant: v2
-            php-version: '8.2'
-            php-type: apache
-            php-base: trixie
+      matrix: ${{ fromJson(needs.setup.outputs.publish_matrix) }}
     
     name: publish-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
     
