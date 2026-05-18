@@ -127,11 +127,11 @@ docker buildx build \
 
 Both Dockerfile.v1 and Dockerfile.v2 accept these build arguments:
 
-| Argument | Description | Example |
-| ---------- | ------------- | --------- |
-| `VERSION` | Full version string | `8.5-fpm-alpine` |
-| `PHPVERSION` | PHP version only | `8.5` |
-| `BASEOS` | Base OS | `alpine` or `bookworm` |
+| Argument     | Description         | Example                |
+|--------------|---------------------|------------------------|
+| `VERSION`    | Full version string | `8.5-fpm-alpine`       |
+| `PHPVERSION` | PHP version only    | `8.5`                  |
+| `BASEOS`     | Base OS             | `alpine` or `bookworm` |
 
 ## Running Smoke Tests Locally
 

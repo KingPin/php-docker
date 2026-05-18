@@ -60,13 +60,13 @@ If you're currently using:
 
 Key system library updates (time64 transition):
 
-| Library | Bookworm | Trixie |
-| --------- | ---------- | -------- |
-| libpng | `libpng16-16` | `libpng16-16t64` |
+| Library       | Bookworm                | Trixie                     |
+|---------------|-------------------------|----------------------------|
+| libpng        | `libpng16-16`           | `libpng16-16t64`           |
 | libmagickwand | `libmagickwand-6.q16-6` | `libmagickwand-6.q16-7t64` |
-| libvips | `libvips42` | `libvips42t64` |
-| libavif | `libavif15` | `libavif16t64` |
-| libmemcached | `libmemcached11` | `libmemcached11t64` |
+| libvips       | `libvips42`             | `libvips42t64`             |
+| libavif       | `libavif15`             | `libavif16t64`             |
+| libmemcached  | `libmemcached11`        | `libmemcached11t64`        |
 
 > **Note:** The `t64` suffix indicates [time64](https://wiki.debian.org/ReleaseGoals/64bit-time) support for 32-bit architectures. This does not affect x86_64 or arm64 users.
 

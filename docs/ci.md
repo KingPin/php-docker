@@ -69,12 +69,12 @@ matrix:
 
 To enable publishing, configure these GitHub repository secrets:
 
-| Secret | Description | Used For |
-| -------- | ------------- | ---------- |
-| `DOCKERHUB_USERNAME` | Docker Hub username | Docker Hub login |
-| `DOCKERHUB_TOKEN` | Docker Hub access token | Docker Hub authentication |
-| `QUAY_USERNAME` | Quay.io username | Quay.io login |
-| `QUAY_ROBOT_TOKEN` | Quay.io robot account token | Quay.io authentication |
+| Secret               | Description                 | Used For                  |
+|----------------------|-----------------------------|---------------------------|
+| `DOCKERHUB_USERNAME` | Docker Hub username         | Docker Hub login          |
+| `DOCKERHUB_TOKEN`    | Docker Hub access token     | Docker Hub authentication |
+| `QUAY_USERNAME`      | Quay.io username            | Quay.io login             |
+| `QUAY_ROBOT_TOKEN`   | Quay.io robot account token | Quay.io authentication    |
 
 **Note:** `GITHUB_TOKEN` is automatically provided by GitHub Actions for GHCR.
 

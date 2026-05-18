@@ -34,43 +34,43 @@ The following environment variables are applied at container startup by the s6-o
 
 ### Memory Settings
 
-| Variable | Default | Description |
-| ---------- | --------- | ------------- |
-| `PHP_MEMORY_LIMIT` | `256M` | Maximum memory a script can consume |
-| `PHP_OPCACHE_MEMORY_CONSUMPTION` | `128` | OPCache memory consumption limit |
-| `PHP_OPCACHE_INTERNED_STRINGS_BUFFER` | `16` | OPCache interned strings buffer |
+| Variable                              | Default | Description                         |
+|---------------------------------------|---------|-------------------------------------|
+| `PHP_MEMORY_LIMIT`                    | `256M`  | Maximum memory a script can consume |
+| `PHP_OPCACHE_MEMORY_CONSUMPTION`      | `128`   | OPCache memory consumption limit    |
+| `PHP_OPCACHE_INTERNED_STRINGS_BUFFER` | `16`    | OPCache interned strings buffer     |
 
 ### Upload Settings
 
-| Variable | Default | Description |
-| ---------- | --------- | ------------- |
-| `PHP_UPLOAD_MAX_FILESIZE` | `64M` | Maximum allowed size for uploaded files |
-| `PHP_POST_MAX_SIZE` | `64M` | Maximum size of POST data allowed |
-| `PHP_MAX_FILE_UPLOADS` | `20` | Maximum number of files allowed for upload |
+| Variable                  | Default | Description                                |
+|---------------------------|---------|--------------------------------------------|
+| `PHP_UPLOAD_MAX_FILESIZE` | `64M`   | Maximum allowed size for uploaded files    |
+| `PHP_POST_MAX_SIZE`       | `64M`   | Maximum size of POST data allowed          |
+| `PHP_MAX_FILE_UPLOADS`    | `20`    | Maximum number of files allowed for upload |
 
 ### Execution Settings
 
-| Variable | Default | Description |
-| ---------- | --------- | ------------- |
-| `PHP_MAX_EXECUTION_TIME` | `300` | Maximum execution time of scripts (seconds) |
-| `PHP_MAX_INPUT_VARS` | `1000` | Maximum input variables allowed |
+| Variable                 | Default | Description                                 |
+|--------------------------|---------|---------------------------------------------|
+| `PHP_MAX_EXECUTION_TIME` | `300`   | Maximum execution time of scripts (seconds) |
+| `PHP_MAX_INPUT_VARS`     | `1000`  | Maximum input variables allowed             |
 
 ### Error Handling
 
-| Variable | Default | Description |
-| ---------- | --------- | ------------- |
-| `PHP_ERROR_REPORTING` | `E_ALL` | Error reporting level |
-| `PHP_DISPLAY_ERRORS` | `Off` | Display errors in output |
-| `PHP_LOG_ERRORS` | `On` | Log errors to error log |
+| Variable              | Default | Description              |
+|-----------------------|---------|--------------------------|
+| `PHP_ERROR_REPORTING` | `E_ALL` | Error reporting level    |
+| `PHP_DISPLAY_ERRORS`  | `Off`   | Display errors in output |
+| `PHP_LOG_ERRORS`      | `On`    | Log errors to error log  |
 
 ### Other Settings
 
-| Variable | Default | Description |
-| ---------- | --------- | ------------- |
-| `PHP_DATE_TIMEZONE` | `UTC` | Default timezone |
-| `PHP_SESSION_GC_MAXLIFETIME` | `1440` | Session garbage collection max lifetime |
-| `PHP_OPCACHE_MAX_ACCELERATED_FILES` | `10000` | OPCache maximum number of files |
-| `PHP_OPCACHE_REVALIDATE_FREQ` | `0` | How often to check script timestamps |
+| Variable                            | Default | Description                             |
+|-------------------------------------|---------|-----------------------------------------|
+| `PHP_DATE_TIMEZONE`                 | `UTC`   | Default timezone                        |
+| `PHP_SESSION_GC_MAXLIFETIME`        | `1440`  | Session garbage collection max lifetime |
+| `PHP_OPCACHE_MAX_ACCELERATED_FILES` | `10000` | OPCache maximum number of files         |
+| `PHP_OPCACHE_REVALIDATE_FREQ`       | `0`     | How often to check script timestamps    |
 
 ### Example usage
 
