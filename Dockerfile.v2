@@ -139,7 +139,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
     chmod +x /usr/local/bin/install-php-extensions && \
     # Install PHP extensions
     install-php-extensions \
-        json mysqli pdo_mysql pdo_pgsql pgsql soap sockets \
+        mysqli pdo_mysql pdo_pgsql pgsql soap sockets \
         opcache redis memcached zstd \
         zip bz2 \
         amqp bcmath calendar ctype exif intl imagick imap ldap mbstring mcrypt \
