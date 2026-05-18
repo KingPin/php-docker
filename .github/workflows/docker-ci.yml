@@ -529,9 +529,25 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: Inspect final manifest
+      - name: Inspect final manifests
         run: |
           set -euo pipefail
           VERSION="${PHP_VERSION}-${PHP_TYPE}-${PHP_BASE}"
           if [ "$VARIANT" = "v2" ]; then SUFFIX="-v2"; else SUFFIX=""; fi
-          docker buildx imagetools inspect "docker.io/${DOCKERHUB_USERNAME}/php-docker:${VERSION}${SUFFIX}"
+          PRIMARY_TAG="${VERSION}${SUFFIX}"
+          EXTRA_TAGS=""
+          if [ "$VARIANT" = "v2" ] && [ "$PHP_BASE" = "trixie" ]; then
+            EXTRA_TAGS="${PHP_VERSION}-${PHP_TYPE}-bookworm${SUFFIX}"
+          fi
+          # Inspect every (registry, tag) combination produced by the create
+          # step so a malformed push or missing alias tag fails the job.
+          for reg in \
+            "docker.io/${DOCKERHUB_USERNAME}/php-docker" \
+            "ghcr.io/kingpin/php-docker" \
+            "quay.io/kingpinx1/php-docker"; do
+            for tag in "$PRIMARY_TAG" $EXTRA_TAGS; do
+              echo "::group::imagetools inspect ${reg}:${tag}"
+              docker buildx imagetools inspect "${reg}:${tag}"
+              echo "::endgroup::"
+            done
+          done
