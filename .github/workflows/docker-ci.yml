@@ -352,27 +352,55 @@ jobs:
 
       - name: Set publish variables
         id: vars
+        env:
+          PHP_VERSION: ${{ matrix.php-version }}
+          PHP_TYPE: ${{ matrix.php-type }}
+          PHP_BASE: ${{ matrix.php-base }}
+          VARIANT: ${{ matrix.variant }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
-          
-          if [ "${{ matrix.variant }}" = "v2" ]; then
+          VERSION="${PHP_VERSION}-${PHP_TYPE}-${PHP_BASE}"
+
+          if [ "$VARIANT" = "v2" ]; then
             TAG_SUFFIX="-v2"
             DOCKERFILE="Dockerfile.v2"
           else
             TAG_SUFFIX=""
             DOCKERFILE="Dockerfile.v1"
           fi
-          
+
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
+
+          DOCKERHUB_TAG="docker.io/${DOCKERHUB_USERNAME}/php-docker:${VERSION}${TAG_SUFFIX}"
+          GHCR_TAG="ghcr.io/kingpin/php-docker:${VERSION}${TAG_SUFFIX}"
+          QUAY_TAG="quay.io/kingpinx1/php-docker:${VERSION}${TAG_SUFFIX}"
+
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
           echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
-          echo "DOCKERHUB_TAG=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-          echo "GHCR_TAG=ghcr.io/kingpin/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-          echo "QUAY_TAG=quay.io/kingpinx1/php-docker:${VERSION}${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}" >> $GITHUB_OUTPUT
+          echo "DOCKERHUB_TAG=${DOCKERHUB_TAG}" >> $GITHUB_OUTPUT
+          echo "GHCR_TAG=${GHCR_TAG}" >> $GITHUB_OUTPUT
+          echo "QUAY_TAG=${QUAY_TAG}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${VARIANT}-${VERSION}" >> $GITHUB_OUTPUT
+
+          # Build the multi-line TAGS output for build-push-action. Always
+          # includes the primary three. For v2/trixie builds, also alias to
+          # the bookworm tag so existing consumers don't break — formerly
+          # done in a separate `docker buildx imagetools create` step.
+          {
+            echo "TAGS<<EOF_TAGS"
+            echo "$DOCKERHUB_TAG"
+            echo "$GHCR_TAG"
+            echo "$QUAY_TAG"
+            if [ "$VARIANT" = "v2" ] && [ "$PHP_BASE" = "trixie" ]; then
+              BOOKWORM_VERSION="${PHP_VERSION}-${PHP_TYPE}-bookworm"
+              echo "docker.io/${DOCKERHUB_USERNAME}/php-docker:${BOOKWORM_VERSION}-v2"
+              echo "ghcr.io/kingpin/php-docker:${BOOKWORM_VERSION}-v2"
+              echo "quay.io/kingpinx1/php-docker:${BOOKWORM_VERSION}-v2"
+            fi
+            echo "EOF_TAGS"
+          } >> $GITHUB_OUTPUT
 
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v7
@@ -392,40 +420,13 @@ jobs:
             S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6_version }}
             BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
             VCS_REF=${{ github.sha }}
-          tags: |
-            ${{ steps.vars.outputs.DOCKERHUB_TAG }}
-            ${{ steps.vars.outputs.GHCR_TAG }}
-            ${{ steps.vars.outputs.QUAY_TAG }}
+          tags: ${{ steps.vars.outputs.TAGS }}
           labels: |
             com.sumguy.php-docker.php.variant=${{ matrix.php-type }}
             com.sumguy.php-docker.image.variant=${{ matrix.variant }}
             com.sumguy.php-docker.build_id=${{ github.run_id }}
             com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             com.sumguy.php-docker.built_by=github-actions/docker-ci
-
-      - name: Create bookworm compatibility tag for v2 trixie images
-        if: matrix.variant == 'v2' && matrix.php-base == 'trixie'
-        run: |
-          echo "::group::Creating bookworm compatibility tags for trixie-built v2 image"
-          
-          # Replace 'trixie' with 'bookworm' in tag names to maintain backward compatibility
-          BOOKWORM_VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-bookworm"
-          
-          # Create manifest aliases pointing trixie-built images to bookworm tags
-          docker buildx imagetools create -t \
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/php-docker:${BOOKWORM_VERSION}-v2 \
-            ${{ steps.vars.outputs.DOCKERHUB_TAG }}
-          
-          docker buildx imagetools create -t \
-            ghcr.io/kingpin/php-docker:${BOOKWORM_VERSION}-v2 \
-            ${{ steps.vars.outputs.GHCR_TAG }}
-          
-          docker buildx imagetools create -t \
-            quay.io/kingpinx1/php-docker:${BOOKWORM_VERSION}-v2 \
-            ${{ steps.vars.outputs.QUAY_TAG }}
-          
-          echo "✅ Created bookworm compatibility tags pointing to trixie image"
-          echo "::endgroup::"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
