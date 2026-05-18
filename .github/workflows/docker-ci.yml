@@ -33,7 +33,7 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      test_matrix: ${{ steps.matrix.outputs.test_matrix }}
+      build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       publish_matrix: ${{ steps.matrix.outputs.publish_matrix }}
       s6_version: ${{ steps.s6.outputs.version }}
     steps:
@@ -42,48 +42,65 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          # The publish matrix is always the full set; the test matrix
-          # narrows the php-version axis on PRs so feedback stays fast.
+          # Two flat matrices are emitted from this step:
+          #   build_matrix   — per-arch build jobs (run on PR + main)
+          #   publish_matrix — per-tuple merge jobs (main / schedule only)
+          # On PRs only amd64 is built so feedback stays fast and we don't
+          # spin up arm runners for unmergeable code.
           FULL_VERSIONS='["8.5","8.4","8.3","8.2"]'
           if [ "$EVENT_NAME" = "pull_request" ]; then
             TEST_VERSIONS='["8.5","8.2"]'
-            echo "::notice::PR detected — testing PHP 8.5 + 8.2 only (skipping 8.4 and 8.3)"
+            ARCHES='[
+              {"arch":"amd64","runner":"ubuntu-latest","platform":"linux/amd64","qemu":false}
+            ]'
+            echo "::notice::PR detected — building amd64 only for PHP 8.5 + 8.2"
           else
             TEST_VERSIONS="$FULL_VERSIONS"
+            ARCHES='[
+              {"arch":"amd64","runner":"ubuntu-latest","platform":"linux/amd64","qemu":false},
+              {"arch":"arm64","runner":"ubuntu-24.04-arm","platform":"linux/arm64","qemu":false},
+              {"arch":"armv7","runner":"ubuntu-latest","platform":"linux/arm/v7","qemu":true}
+            ]'
           fi
 
-          # build_matrix VERSIONS_JSON → matrix JSON string. variant × php-version
-          # × php-type × php-base, minus apache-on-alpine and v2-on-bookworm,
-          # plus an explicit v2/trixie include list (one per type).
-          build_matrix() {
-            local versions="$1"
-            local includes="[]"
-            for ver in $(echo "$versions" | jq -r '.[]'); do
-              for type in fpm cli apache; do
-                includes=$(echo "$includes" | jq -c \
-                  ". + [{\"variant\":\"v2\",\"php-version\":\"$ver\",\"php-type\":\"$type\",\"php-base\":\"trixie\"}]")
-              done
-            done
-            jq -n -c \
-              --argjson versions "$versions" \
-              --argjson includes "$includes" \
-              '{
-                "variant": ["v1","v2"],
-                "php-version": $versions,
-                "php-type": ["fpm","cli","apache"],
-                "php-base": ["alpine","bookworm"],
-                "exclude": [
-                  {"php-type":"apache","php-base":"alpine"},
-                  {"variant":"v2","php-base":"bookworm"}
-                ],
-                "include": $includes
-              }'
+          # gen_tuples VERSIONS_JSON → flat array of {variant, php-version,
+          # php-type, php-base} entries. Mirrors the prior matrix logic:
+          # cartesian product minus apache-on-alpine and v2-on-bookworm,
+          # plus an explicit v2/trixie row per (version, type).
+          gen_tuples() {
+            jq -n -c --argjson versions "$1" '
+              [
+                ["v1","v2"][] as $variant
+                | $versions[] as $ver
+                | ["fpm","cli","apache"][] as $type
+                | ["alpine","bookworm"][] as $base
+                | select(
+                    ($type != "apache" or $base != "alpine") and
+                    ($variant != "v2" or $base != "bookworm")
+                  )
+                | {variant: $variant, "php-version": $ver, "php-type": $type, "php-base": $base}
+              ]
+              +
+              [
+                $versions[] as $ver
+                | ["fpm","cli","apache"][] as $type
+                | {variant: "v2", "php-version": $ver, "php-type": $type, "php-base": "trixie"}
+              ]
+            '
           }
 
-          TEST_MATRIX=$(build_matrix "$TEST_VERSIONS")
-          PUBLISH_MATRIX=$(build_matrix "$FULL_VERSIONS")
+          TEST_TUPLES=$(gen_tuples "$TEST_VERSIONS")
+          PUBLISH_TUPLES=$(gen_tuples "$FULL_VERSIONS")
 
-          echo "test_matrix=$TEST_MATRIX" >> $GITHUB_OUTPUT
+          BUILD_INCLUDES=$(jq -n -c \
+            --argjson tuples "$TEST_TUPLES" \
+            --argjson arches "$ARCHES" \
+            '[$tuples[] as $t | $arches[] as $a | $t + $a]')
+
+          BUILD_MATRIX=$(jq -n -c --argjson includes "$BUILD_INCLUDES" '{include: $includes}')
+          PUBLISH_MATRIX=$(jq -n -c --argjson includes "$PUBLISH_TUPLES" '{include: $includes}')
+
+          echo "build_matrix=$BUILD_MATRIX" >> $GITHUB_OUTPUT
           echo "publish_matrix=$PUBLISH_MATRIX" >> $GITHUB_OUTPUT
 
       - name: Get latest s6-overlay version
@@ -101,21 +118,39 @@ jobs:
           echo "version=${S6_OVERLAY_VERSION}" >> $GITHUB_OUTPUT
           echo "✅ Latest s6-overlay version: ${S6_OVERLAY_VERSION}"
 
-  build-and-test:
+  build:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       security-events: write
+      packages: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.test_matrix) }}
-    
-    name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
-    
+      matrix: ${{ fromJson(needs.setup.outputs.build_matrix) }}
+
+    name: ${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}-${{ matrix.arch }}
+
+    env:
+      PHP_VERSION: ${{ matrix.php-version }}
+      PHP_TYPE: ${{ matrix.php-type }}
+      PHP_BASE: ${{ matrix.php-base }}
+      VARIANT: ${{ matrix.variant }}
+      ARCH: ${{ matrix.arch }}
+      PLATFORM: ${{ matrix.platform }}
+      # Staging registry: per-arch images are pushed by digest here and the
+      # merge job copies them out to Docker Hub and Quay.
+      STAGING_NAME: ghcr.io/kingpin/php-docker
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup QEMU
+        if: matrix.qemu
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: ${{ matrix.platform }}
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -123,32 +158,44 @@ jobs:
       - name: Set build variables
         id: vars
         run: |
-          VERSION="${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}"
-          TAG_BASE="php-docker:${VERSION}"
-          
-          if [ "${{ matrix.variant }}" = "v2" ]; then
-            TAG="${TAG_BASE}-v2"
+          VERSION="${PHP_VERSION}-${PHP_TYPE}-${PHP_BASE}"
+          if [ "$VARIANT" = "v2" ]; then
+            TAG="${VERSION}-v2"
             DOCKERFILE="Dockerfile.v2"
           else
-            TAG="${TAG_BASE}"
+            TAG="${VERSION}"
             DOCKERFILE="Dockerfile.v1"
           fi
-          
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
+          # Per-arch cache scope so concurrent matrix jobs don't fight.
+          CACHE_SCOPE="${VARIANT}-${VERSION}-${ARCH}"
+
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
           echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
-          echo "CACHE_SCOPE=${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}" >> $GITHUB_OUTPUT
+          echo "CACHE_SCOPE=${CACHE_SCOPE}" >> $GITHUB_OUTPUT
 
-      - name: Build test image
+      - name: Login to GHCR
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # amd64 jobs build with `load: true` so smoke tests + Trivy can run
+      # against the local docker daemon. On main this is a separate build
+      # from the digest-push below — both share the same GHA cache scope,
+      # so the second build is essentially a cache hit.
+      - name: Build amd64 test image
+        if: matrix.arch == 'amd64'
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ steps.vars.outputs.DOCKERFILE }}
           load: true
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
           build-args: |
@@ -161,16 +208,19 @@ jobs:
           tags: test-${{ steps.vars.outputs.TAG }}
 
       - name: Smoke tests - PHP version
+        if: matrix.arch == 'amd64'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
+          EXPECTED_VERSION: ${{ matrix.php-version }}
         run: |
           echo "::group::Testing PHP version"
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} php -v | tee php-version.txt; then
+          if ! docker run --rm "$TEST_TAG" php -v | tee php-version.txt; then
             echo "::error::Failed to run php -v"
-            docker logs test-${{ steps.vars.outputs.TAG }} 2>&1 || true
+            docker logs "$TEST_TAG" 2>&1 || true
             exit 1
           fi
-          
-          if ! grep -q "${{ matrix.php-version }}" php-version.txt; then
-            echo "::error::PHP version mismatch - expected ${{ matrix.php-version }}"
+          if ! grep -q "$EXPECTED_VERSION" php-version.txt; then
+            echo "::error::PHP version mismatch - expected $EXPECTED_VERSION"
             cat php-version.txt
             exit 1
           fi
@@ -178,9 +228,12 @@ jobs:
           echo "::endgroup::"
 
       - name: Smoke tests - Basic PHP CLI run
+        if: matrix.arch == 'amd64'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing basic PHP CLI execution"
-          SAPI=$(docker run --rm test-${{ steps.vars.outputs.TAG }} php -r "echo PHP_SAPI;" 2>&1)
+          SAPI=$(docker run --rm "$TEST_TAG" php -r "echo PHP_SAPI;" 2>&1)
           if [ $? -ne 0 ]; then
             echo "::error::Failed to execute PHP CLI test"
             echo "$SAPI"
@@ -190,18 +243,18 @@ jobs:
           echo "::endgroup::"
 
       - name: Smoke tests - Extensions
+        if: matrix.arch == 'amd64'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing PHP extensions"
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} php -m | tee extensions.txt; then
+          if ! docker run --rm "$TEST_TAG" php -m | tee extensions.txt; then
             echo "::error::Failed to list PHP extensions"
-            docker logs test-${{ steps.vars.outputs.TAG }} 2>&1 || true
+            docker logs "$TEST_TAG" 2>&1 || true
             exit 1
           fi
-          
-          # Core extensions that should be present
           REQUIRED_EXTS="gd json mysqli zip"
           MISSING_EXTS=""
-          
           for ext in $REQUIRED_EXTS; do
             if ! grep -qi "$ext" extensions.txt; then
               MISSING_EXTS="$MISSING_EXTS $ext"
@@ -210,7 +263,6 @@ jobs:
               echo "✅ Extension $ext found"
             fi
           done
-          
           if [ -n "$MISSING_EXTS" ]; then
             echo "::error::Missing required extensions:$MISSING_EXTS"
             echo "Available extensions:"
@@ -220,17 +272,18 @@ jobs:
           echo "::endgroup::"
 
       - name: Smoke tests - Entrypoint quick-run
+        if: matrix.arch == 'amd64'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing entrypoint/init quick-run"
-          OUTPUT=$(docker run --rm test-${{ steps.vars.outputs.TAG }} php -r "echo 'entrypoint-ok';" 2>&1)
+          OUTPUT=$(docker run --rm "$TEST_TAG" php -r "echo 'entrypoint-ok';" 2>&1)
           EXIT_CODE=$?
-          
           if [ $EXIT_CODE -ne 0 ]; then
             echo "::error::Entrypoint test failed with exit code $EXIT_CODE"
             echo "$OUTPUT"
             exit 1
           fi
-          
           if ! echo "$OUTPUT" | grep -q "entrypoint-ok"; then
             echo "::error::Entrypoint did not produce expected output"
             echo "Output: $OUTPUT"
@@ -240,12 +293,13 @@ jobs:
           echo "::endgroup::"
 
       - name: Smoke tests - Directory permissions
+        if: matrix.arch == 'amd64'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing directory permissions"
-          DIRS_TO_CHECK="/tmp /var/www"
-          
-          for dir in $DIRS_TO_CHECK; do
-            if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d $dir && [ -w $dir ]" 2>&1; then
+          for dir in /tmp /var/www; do
+            if ! docker run --rm "$TEST_TAG" sh -c "test -d $dir && [ -w $dir ]" 2>&1; then
               echo "::warning::Directory $dir either doesn't exist or is not writable"
             else
               echo "✅ Directory $dir exists and is writable"
@@ -254,40 +308,37 @@ jobs:
           echo "::endgroup::"
 
       - name: Smoke tests - v2 specific (s6-overlay)
-        if: matrix.variant == 'v2'
+        if: matrix.arch == 'amd64' && matrix.variant == 'v2'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing s6-overlay presence and PID1 behavior"
-          
-          # Check s6-overlay directory
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d /etc/s6-overlay" 2>&1; then
+          if ! docker run --rm "$TEST_TAG" sh -c "test -d /etc/s6-overlay" 2>&1; then
             echo "::error::s6-overlay directory not found at /etc/s6-overlay"
-            docker run --rm test-${{ steps.vars.outputs.TAG }} ls -la /etc/ 2>&1 || true
+            docker run --rm "$TEST_TAG" ls -la /etc/ 2>&1 || true
             exit 1
           fi
           echo "✅ s6-overlay directory exists"
-          
-          # Check init binary
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -f /init" 2>&1; then
+          if ! docker run --rm "$TEST_TAG" sh -c "test -f /init" 2>&1; then
             echo "::error::s6 init binary not found at /init"
-            docker run --rm test-${{ steps.vars.outputs.TAG }} ls -la / 2>&1 || true
+            docker run --rm "$TEST_TAG" ls -la / 2>&1 || true
             exit 1
           fi
           echo "✅ s6 init binary exists"
-          
-          # Check for s6-overlay services directory
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} sh -c "test -d /etc/s6-overlay/s6-rc.d || test -d /etc/services.d" 2>&1; then
-            echo "::warning::s6 services directory not found (expected /etc/s6-overlay/s6-rc.d or /etc/services.d)"
+          if ! docker run --rm "$TEST_TAG" sh -c "test -d /etc/s6-overlay/s6-rc.d || test -d /etc/services.d" 2>&1; then
+            echo "::warning::s6 services directory not found"
           else
             echo "✅ s6 services directory found"
           fi
-          
           echo "::endgroup::"
 
       - name: Smoke tests - FPM specific
-        if: matrix.php-type == 'fpm'
+        if: matrix.arch == 'amd64' && matrix.php-type == 'fpm'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing PHP-FPM"
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} php-fpm --version 2>&1 | tee fpm-version.txt; then
+          if ! docker run --rm "$TEST_TAG" php-fpm --version 2>&1 | tee fpm-version.txt; then
             echo "::error::Failed to run php-fpm --version"
             cat fpm-version.txt || true
             exit 1
@@ -296,10 +347,12 @@ jobs:
           echo "::endgroup::"
 
       - name: Smoke tests - Apache specific
-        if: matrix.php-type == 'apache'
+        if: matrix.arch == 'amd64' && matrix.php-type == 'apache'
+        env:
+          TEST_TAG: test-${{ steps.vars.outputs.TAG }}
         run: |
           echo "::group::Testing Apache"
-          if ! docker run --rm test-${{ steps.vars.outputs.TAG }} apache2 -v 2>&1 | tee apache-version.txt; then
+          if ! docker run --rm "$TEST_TAG" apache2 -v 2>&1 | tee apache-version.txt; then
             echo "::error::Failed to run apache2 -v"
             cat apache-version.txt || true
             exit 1
@@ -307,11 +360,11 @@ jobs:
           echo "✅ Apache version check passed"
           echo "::endgroup::"
 
-      # Scan the locally-loaded test image (amd64) before publish gets a
-      # chance to run. exit-code: 1 turns CRITICAL/HIGH findings into a job
-      # failure, so vulnerable images never reach the registries.
-      # ignore-unfixed: true suppresses advisories with no upstream fix yet.
+      # Trivy gates the publish step. exit-code: 1 fails the job on
+      # CRITICAL/HIGH so vulnerable images can't reach the registries.
+      # ignore-unfixed: true filters out advisories with no upstream fix.
       - name: Trivy vulnerability scan
+        if: matrix.arch == 'amd64'
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
@@ -323,34 +376,85 @@ jobs:
           output: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
 
       - name: Upload Trivy results
-        if: always()
+        if: matrix.arch == 'amd64' && always()
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+          category: trivy-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
+
+      # Push the per-arch image to the staging registry (GHCR) by digest.
+      # The merge job will pull these digests and assemble final manifests
+      # on Docker Hub, GHCR, and Quay with the proper tags.
+      - name: Build and push by digest
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ steps.vars.outputs.DOCKERFILE }}
+          platforms: ${{ matrix.platform }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
+          outputs: type=image,name=${{ env.STAGING_NAME }},push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            VERSION=${{ steps.vars.outputs.VERSION }}
+            PHPVERSION=${{ matrix.php-version }}
+            BASEOS=${{ matrix.php-base }}
+            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6_version }}
+            BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
+            VCS_REF=${{ github.sha }}
+          labels: |
+            com.sumguy.php-docker.php.variant=${{ matrix.php-type }}
+            com.sumguy.php-docker.image.variant=${{ matrix.variant }}
+            com.sumguy.php-docker.build_id=${{ github.run_id }}
+            com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            com.sumguy.php-docker.built_by=github-actions/docker-ci
+
+      - name: Export digest
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Summary
         run: |
-          echo "::notice::✅ Build and tests passed for ${{ matrix.variant }} - ${{ steps.vars.outputs.TAG }}"
+          echo "::notice::✅ Build passed for ${{ matrix.variant }} ${{ steps.vars.outputs.TAG }} on ${{ matrix.arch }}"
 
-  publish:
-    needs: [setup, build-and-test]
+  publish-merge:
+    needs: [setup, build]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup.outputs.publish_matrix) }}
-    
+
     name: publish-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}
-    
+
+    env:
+      PHP_VERSION: ${{ matrix.php-version }}
+      PHP_TYPE: ${{ matrix.php-type }}
+      PHP_BASE: ${{ matrix.php-base }}
+      VARIANT: ${{ matrix.variant }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      STAGING_NAME: ghcr.io/kingpin/php-docker
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: amd64,arm64,arm
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -374,81 +478,60 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_ROBOT_TOKEN }}
 
-      - name: Set publish variables
-        id: vars
-        env:
-          PHP_VERSION: ${{ matrix.php-version }}
-          PHP_TYPE: ${{ matrix.php-type }}
-          PHP_BASE: ${{ matrix.php-base }}
-          VARIANT: ${{ matrix.variant }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: |
-          VERSION="${PHP_VERSION}-${PHP_TYPE}-${PHP_BASE}"
+      - name: Download per-arch digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}-*
+          merge-multiple: true
+          path: /tmp/digests
 
+      - name: Create manifest lists
+        run: |
+          set -euo pipefail
+          VERSION="${PHP_VERSION}-${PHP_TYPE}-${PHP_BASE}"
           if [ "$VARIANT" = "v2" ]; then
-            TAG_SUFFIX="-v2"
-            DOCKERFILE="Dockerfile.v2"
+            SUFFIX="-v2"
           else
-            TAG_SUFFIX=""
-            DOCKERFILE="Dockerfile.v1"
+            SUFFIX=""
+          fi
+          PRIMARY_TAG="${VERSION}${SUFFIX}"
+          # v2/trixie also gets a bookworm-aliased tag so existing consumers
+          # of `<ver>-<type>-bookworm-v2` keep resolving to the new image.
+          EXTRA_TAGS=""
+          if [ "$VARIANT" = "v2" ] && [ "$PHP_BASE" = "trixie" ]; then
+            EXTRA_TAGS="${PHP_VERSION}-${PHP_TYPE}-bookworm${SUFFIX}"
           fi
 
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          cd /tmp/digests
+          DIGEST_FILES=$(ls -1)
+          if [ -z "$DIGEST_FILES" ]; then
+            echo "::error::No digests found for $VERSION$SUFFIX"
+            exit 1
+          fi
+          # imagetools create copies blobs across registries as needed; the
+          # per-arch images live on GHCR (staging) and the final manifests
+          # land on all three registries with all the desired tags.
+          for reg in \
+            "docker.io/${DOCKERHUB_USERNAME}/php-docker" \
+            "ghcr.io/kingpin/php-docker" \
+            "quay.io/kingpinx1/php-docker"; do
+            T_ARGS="-t ${reg}:${PRIMARY_TAG}"
+            for et in $EXTRA_TAGS; do
+              T_ARGS="${T_ARGS} -t ${reg}:${et}"
+            done
+            S_ARGS=""
+            for d in $DIGEST_FILES; do
+              S_ARGS="${S_ARGS} ${STAGING_NAME}@sha256:${d}"
+            done
+            echo "::group::imagetools create ${reg}:${PRIMARY_TAG}"
+            # shellcheck disable=SC2086
+            docker buildx imagetools create $T_ARGS $S_ARGS
+            echo "::endgroup::"
+          done
 
-          DOCKERHUB_TAG="docker.io/${DOCKERHUB_USERNAME}/php-docker:${VERSION}${TAG_SUFFIX}"
-          GHCR_TAG="ghcr.io/kingpin/php-docker:${VERSION}${TAG_SUFFIX}"
-          QUAY_TAG="quay.io/kingpinx1/php-docker:${VERSION}${TAG_SUFFIX}"
-
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          echo "TAG_SUFFIX=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
-          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_OUTPUT
-          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
-          echo "DOCKERHUB_TAG=${DOCKERHUB_TAG}" >> $GITHUB_OUTPUT
-          echo "GHCR_TAG=${GHCR_TAG}" >> $GITHUB_OUTPUT
-          echo "QUAY_TAG=${QUAY_TAG}" >> $GITHUB_OUTPUT
-          echo "CACHE_SCOPE=${VARIANT}-${VERSION}" >> $GITHUB_OUTPUT
-
-          # Build the multi-line TAGS output for build-push-action. Always
-          # includes the primary three. For v2/trixie builds, also alias to
-          # the bookworm tag so existing consumers don't break — formerly
-          # done in a separate `docker buildx imagetools create` step.
-          {
-            echo "TAGS<<EOF_TAGS"
-            echo "$DOCKERHUB_TAG"
-            echo "$GHCR_TAG"
-            echo "$QUAY_TAG"
-            if [ "$VARIANT" = "v2" ] && [ "$PHP_BASE" = "trixie" ]; then
-              BOOKWORM_VERSION="${PHP_VERSION}-${PHP_TYPE}-bookworm"
-              echo "docker.io/${DOCKERHUB_USERNAME}/php-docker:${BOOKWORM_VERSION}-v2"
-              echo "ghcr.io/kingpin/php-docker:${BOOKWORM_VERSION}-v2"
-              echo "quay.io/kingpinx1/php-docker:${BOOKWORM_VERSION}-v2"
-            fi
-            echo "EOF_TAGS"
-          } >> $GITHUB_OUTPUT
-
-      - name: Build and push multi-arch image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ${{ steps.vars.outputs.DOCKERFILE }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          provenance: mode=max
-          sbom: true
-          cache-from: type=gha,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
-          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.CACHE_SCOPE }}
-          build-args: |
-            VERSION=${{ steps.vars.outputs.VERSION }}
-            PHPVERSION=${{ matrix.php-version }}
-            BASEOS=${{ matrix.php-base }}
-            S6_OVERLAY_VERSION=${{ needs.setup.outputs.s6_version }}
-            BUILD_DATE=${{ steps.vars.outputs.BUILD_DATE }}
-            VCS_REF=${{ github.sha }}
-          tags: ${{ steps.vars.outputs.TAGS }}
-          labels: |
-            com.sumguy.php-docker.php.variant=${{ matrix.php-type }}
-            com.sumguy.php-docker.image.variant=${{ matrix.variant }}
-            com.sumguy.php-docker.build_id=${{ github.run_id }}
-            com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            com.sumguy.php-docker.built_by=github-actions/docker-ci
-
+      - name: Inspect final manifest
+        run: |
+          set -euo pipefail
+          VERSION="${PHP_VERSION}-${PHP_TYPE}-${PHP_BASE}"
+          if [ "$VARIANT" = "v2" ]; then SUFFIX="-v2"; else SUFFIX=""; fi
+          docker buildx imagetools inspect "docker.io/${DOCKERHUB_USERNAME}/php-docker:${VERSION}${SUFFIX}"
