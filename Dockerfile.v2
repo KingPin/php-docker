@@ -65,6 +65,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
                 libxpm4 \
                 libxpm-dev \
                 equivs && \
+            # ---------------------------------------------------------------
+            # Debian Trixie t64 transition (time_t → 64-bit on 32-bit archs)
+            # renamed several library packages to the *t64 suffix. Some
+            # pre-built artifacts from install-php-extensions still declare
+            # runtime deps under the *old* names (libmemcachedutil2, libssl3)
+            # rather than the t64 variants (libmemcachedutil2t64, libssl3t64).
+            # We synthesize empty dummy packages with `equivs` that satisfy
+            # those old names while actually pulling in the t64 packages, so
+            # apt's dep resolver is happy. Remove this block once upstream
+            # install-php-extensions (mlocati/docker-php-extension-installer)
+            # ships binaries linked against the t64 SONAMEs directly.
+            # ---------------------------------------------------------------
             echo 'Package: libmemcachedutil2' > /tmp/libmemcachedutil2.control && \
             echo 'Version: 999.0' >> /tmp/libmemcachedutil2.control && \
             echo 'Architecture: all' >> /tmp/libmemcachedutil2.control && \
