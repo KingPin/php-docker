@@ -40,10 +40,10 @@ jobs:
         id: matrix
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PHP_VERSIONS='["8.4","8.2"]'
-            echo "::notice::PR detected — testing PHP 8.4 + 8.2 only (skipping 8.3)"
+            PHP_VERSIONS='["8.5","8.2"]'
+            echo "::notice::PR detected — testing PHP 8.5 + 8.2 only (skipping 8.4 and 8.3)"
           else
-            PHP_VERSIONS='["8.4","8.3","8.2"]'
+            PHP_VERSIONS='["8.5","8.4","8.3","8.2"]'
           fi
 
           # Build trixie include list for v2 based on selected PHP versions
@@ -301,7 +301,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: [v1, v2]
-        php-version: ['8.4', '8.3', '8.2']
+        php-version: ['8.5', '8.4', '8.3', '8.2']
         php-type: [fpm, cli, apache]
         php-base: [alpine, bookworm]
         exclude:
@@ -312,6 +312,18 @@ jobs:
             php-base: bookworm
         include:
           # v2 builds on trixie for Debian images
+          - variant: v2
+            php-version: '8.5'
+            php-type: fpm
+            php-base: trixie
+          - variant: v2
+            php-version: '8.5'
+            php-type: cli
+            php-base: trixie
+          - variant: v2
+            php-version: '8.5'
+            php-type: apache
+            php-base: trixie
           - variant: v2
             php-version: '8.4'
             php-type: fpm

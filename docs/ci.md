@@ -21,14 +21,15 @@ The unified CI workflow handles both v1 and v2 variants in a single pipeline.
 
 #### 1. build-and-test
 
-Runs on every push and pull request:
+Runs on every push to `main`, pull request, weekly schedule, and `workflow_dispatch`:
 
 ```yaml
 matrix:
   variant: [v1, v2]
-  php-version: ['8.3', '8.1']
-  php-type: [fpm, cli]
-  php-base: [alpine, bookworm]
+  php-version: ['8.5', '8.4', '8.3', '8.2']  # PR fast-path: ['8.5', '8.2']
+  php-type: [fpm, cli, apache]
+  php-base: [alpine, bookworm]   # v2 uses trixie instead of bookworm
+  # apache+alpine excluded; v2/trixie added via include
 ```
 
 **What it does:**
@@ -40,7 +41,7 @@ matrix:
   - v2: s6-overlay validation
   - FPM: PHP-FPM functionality
 - Uses GitHub Actions cache for faster builds
-- Fails fast if any variant fails
+- Does **not** fail-fast: every variant runs even if one fails, so a single broken combination doesn't mask others (`strategy.fail-fast: false`)
 
 #### 2. publish
 
@@ -49,9 +50,10 @@ Runs **only on `main` branch** after successful build-and-test:
 ```yaml
 matrix:
   variant: [v1, v2]
-  php-version: ['8.3', '8.2', '8.1', '7']
+  php-version: ['8.5', '8.4', '8.3', '8.2']
   php-type: [fpm, cli, apache]
-  php-base: [alpine, bookworm, bullseye]
+  php-base: [alpine, bookworm]   # v2 uses trixie instead of bookworm
+  # apache+alpine excluded; v2/trixie added via include
 ```
 
 **What it does:**
@@ -67,12 +69,12 @@ matrix:
 
 To enable publishing, configure these GitHub repository secrets:
 
-| Secret | Description | Used For |
-|--------|-------------|----------|
-| `DOCKERHUB_USERNAME` | Docker Hub username | Docker Hub login |
-| `DOCKERHUB_TOKEN` | Docker Hub access token | Docker Hub authentication |
-| `QUAY_USERNAME` | Quay.io username | Quay.io login |
-| `QUAY_ROBOT_TOKEN` | Quay.io robot account token | Quay.io authentication |
+| Secret               | Description                 | Used For                  |
+|----------------------|-----------------------------|---------------------------|
+| `DOCKERHUB_USERNAME` | Docker Hub username         | Docker Hub login          |
+| `DOCKERHUB_TOKEN`    | Docker Hub access token     | Docker Hub authentication |
+| `QUAY_USERNAME`      | Quay.io username            | Quay.io login             |
+| `QUAY_ROBOT_TOKEN`   | Quay.io robot account token | Quay.io authentication    |
 
 **Note:** `GITHUB_TOKEN` is automatically provided by GitHub Actions for GHCR.
 
@@ -117,12 +119,12 @@ When you open a PR, CI will:
 
 ### Branch Testing
 
-Pushing to any branch (not just `main`) will:
-1. Trigger build-and-test job
-2. Run all smoke tests
-3. **Will NOT publish** images
+The `push` trigger is restricted to `main` — pushing to a feature branch does **not** by itself run CI. Non-main work is tested via:
 
-Only merging to `main` triggers publishing.
+1. **Pull requests**: open a PR against any branch; the PR fast-path matrix runs build-and-test (testing newest + oldest PHP only, currently 8.5 + 8.2)
+2. **`workflow_dispatch`**: manually trigger a run from the Actions tab on any ref
+
+Either path runs build-and-test but **will NOT publish** images. Only merging to `main` (via push or PR merge) triggers the publish job.
 
 ## Security Scanning
 
@@ -176,8 +178,8 @@ Published tags follow this format:
 **v2:** `{php-version}-{type}-{os}-v2`
 
 Examples:
-- `8.3-fpm-alpine` (v1)
-- `8.3-fpm-alpine-v2` (v2)
+- `8.5-fpm-alpine` (v1)
+- `8.5-fpm-alpine-v2` (v2)
 - `8.2-cli-bookworm` (v1)
 - `8.2-cli-bookworm-v2` (v2)
 
