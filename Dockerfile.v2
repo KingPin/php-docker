@@ -12,8 +12,7 @@ ARG VERSION
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY extras/retry.sh /usr/local/bin/retry
-RUN chmod +x /usr/local/bin/retry
+COPY --chmod=0755 extras/retry.sh /usr/local/bin/retry
 
 # OCI standard labels
 LABEL org.opencontainers.image.title="php-docker" \
@@ -66,6 +65,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
                 libxpm4 \
                 libxpm-dev \
                 equivs && \
+            # ---------------------------------------------------------------
+            # Debian Trixie t64 transition (time_t → 64-bit on 32-bit archs)
+            # renamed several library packages to the *t64 suffix. Some
+            # pre-built artifacts from install-php-extensions still declare
+            # runtime deps under the *old* names (libmemcachedutil2, libssl3)
+            # rather than the t64 variants (libmemcachedutil2t64, libssl3t64).
+            # We synthesize empty dummy packages with `equivs` that satisfy
+            # those old names while actually pulling in the t64 packages, so
+            # apt's dep resolver is happy. Remove this block once upstream
+            # install-php-extensions (mlocati/docker-php-extension-installer)
+            # ships binaries linked against the t64 SONAMEs directly.
+            # ---------------------------------------------------------------
             echo 'Package: libmemcachedutil2' > /tmp/libmemcachedutil2.control && \
             echo 'Version: 999.0' >> /tmp/libmemcachedutil2.control && \
             echo 'Architecture: all' >> /tmp/libmemcachedutil2.control && \
@@ -109,6 +120,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
         fi; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
+        apk upgrade --no-cache && \
         apk add --no-cache \
             build-base \
             curl git zip unzip wget ca-certificates xz \
@@ -139,7 +151,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
     chmod +x /usr/local/bin/install-php-extensions && \
     # Install PHP extensions
     install-php-extensions \
-        json mysqli pdo_mysql pdo_pgsql pgsql soap sockets \
+        mysqli pdo_mysql pdo_pgsql pgsql soap sockets \
         opcache redis memcached zstd \
         zip bz2 \
         amqp bcmath calendar ctype exif intl imagick imap ldap mbstring mcrypt \
@@ -264,13 +276,9 @@ RUN if [ "$BASEOS" != "alpine" ]; then \
 
 WORKDIR /var/www/html
 
-# Copy S6 configuration files
-COPY s6-overlay/cont-init.d/ /etc/cont-init.d/
-COPY s6-overlay/services.d/ /etc/services.d/
-
-# Set permissions for S6 scripts and convert line endings
-RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
-    find /etc/cont-init.d /etc/services.d -type f -exec sed -i 's/\r$//' {} +
+# Copy S6 configuration files (line endings enforced via .gitattributes)
+COPY --chmod=0755 s6-overlay/cont-init.d/ /etc/cont-init.d/
+COPY --chmod=0755 s6-overlay/services.d/ /etc/services.d/
 
 ENTRYPOINT ["/init"]
 CMD []

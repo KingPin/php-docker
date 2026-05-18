@@ -6,8 +6,7 @@ ARG BASEOS
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY extras/retry.sh /usr/local/bin/retry
-RUN chmod +x /usr/local/bin/retry
+COPY --chmod=0755 extras/retry.sh /usr/local/bin/retry
 
 # Install dependencies based on the base OS
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
@@ -19,6 +18,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
         apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo-progs pngquant webp; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
+        apk upgrade --no-cache && \
         apk add --no-cache curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools; \
     fi
 
@@ -27,7 +27,7 @@ RUN retry 3 curl -sSLf -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
     chmod +x /usr/local/bin/install-php-extensions && \
     retry 3 install-php-extensions \
-        amqp bcmath bz2 calendar ctype exif intl imagick imap json mbstring ldap mcrypt memcached mongodb \
+        amqp bcmath bz2 calendar ctype exif intl imagick imap mbstring ldap mcrypt memcached mongodb \
         mysqli opcache pdo_mysql pdo_pgsql pgsql redis snmp soap sockets tidy timezonedb uuid vips xsl yaml zip zstd @composer
 
 # Enable Apache rewrite mod, if applicable

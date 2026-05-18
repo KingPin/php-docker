@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Shell scripts and s6-overlay service files must always use LF line
+# endings — the s6 supervision tree refuses to exec scripts with CRLF.
+*.sh             text eol=lf
+extras/retry.sh  text eol=lf
+s6-overlay/**    text eol=lf
+
+# Dockerfiles
+Dockerfile*      text eol=lf
