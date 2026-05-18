@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
         apt-get install -y --no-install-recommends curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo-progs pngquant webp; \
     elif [ "$BASEOS" = "alpine" ]; then \
         apk update && \
+        apk upgrade --no-cache && \
         apk add --no-cache curl git zip unzip ghostscript imagemagick optipng gifsicle pngcrush jpegoptim libjpeg-turbo libjpeg-turbo-utils pngquant libwebp-tools; \
     fi
 
