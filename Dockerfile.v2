@@ -12,8 +12,7 @@ ARG VERSION
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY extras/retry.sh /usr/local/bin/retry
-RUN chmod +x /usr/local/bin/retry
+COPY --chmod=0755 extras/retry.sh /usr/local/bin/retry
 
 # OCI standard labels
 LABEL org.opencontainers.image.title="php-docker" \
@@ -264,13 +263,9 @@ RUN if [ "$BASEOS" != "alpine" ]; then \
 
 WORKDIR /var/www/html
 
-# Copy S6 configuration files
-COPY s6-overlay/cont-init.d/ /etc/cont-init.d/
-COPY s6-overlay/services.d/ /etc/services.d/
-
-# Set permissions for S6 scripts and convert line endings
-RUN chmod -R 755 /etc/cont-init.d /etc/services.d && \
-    find /etc/cont-init.d /etc/services.d -type f -exec sed -i 's/\r$//' {} +
+# Copy S6 configuration files (line endings enforced via .gitattributes)
+COPY --chmod=0755 s6-overlay/cont-init.d/ /etc/cont-init.d/
+COPY --chmod=0755 s6-overlay/services.d/ /etc/services.d/
 
 ENTRYPOINT ["/init"]
 CMD []

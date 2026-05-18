@@ -6,8 +6,7 @@ ARG BASEOS
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY extras/retry.sh /usr/local/bin/retry
-RUN chmod +x /usr/local/bin/retry
+COPY --chmod=0755 extras/retry.sh /usr/local/bin/retry
 
 # Install dependencies based on the base OS
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=apt-$BASEOS \
