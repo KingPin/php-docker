@@ -104,6 +104,9 @@ jobs:
   build-and-test:
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup.outputs.test_matrix) }}
@@ -304,6 +307,27 @@ jobs:
           echo "✅ Apache version check passed"
           echo "::endgroup::"
 
+      # Scan the locally-loaded test image (amd64) before publish gets a
+      # chance to run. exit-code: 1 turns CRITICAL/HIGH findings into a job
+      # failure, so vulnerable images never reach the registries.
+      # ignore-unfixed: true suppresses advisories with no upstream fix yet.
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: test-${{ steps.vars.outputs.TAG }}
+          format: 'sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1'
+          output: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
+
       - name: Summary
         run: |
           echo "::notice::✅ Build and tests passed for ${{ matrix.variant }} - ${{ steps.vars.outputs.TAG }}"
@@ -428,16 +452,3 @@ jobs:
             com.sumguy.php-docker.build_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             com.sumguy.php-docker.built_by=github-actions/docker-ci
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: image
-          image-ref: ${{ steps.vars.outputs.DOCKERHUB_TAG }}
-          format: 'sarif'
-          severity: 'CRITICAL,HIGH'
-          output: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
