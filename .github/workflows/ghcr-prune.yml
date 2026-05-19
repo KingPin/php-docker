@@ -1,0 +1,40 @@
+name: GHCR untagged prune
+
+# Per-arch staging digests pushed during docker-ci.yml accumulate as untagged
+# versions on the ghcr.io/kingpin/php-docker package. The cleanup action's
+# algorithm removes children of live manifest lists from the working set
+# before applying any deletion rule, so the per-arch digests referenced by
+# current tags are safe even though they appear untagged in the GHCR UI.
+#
+# older-than: 28d keeps a buffer wide enough to survive 2-3 weeks without a
+# successful build (weekly schedule + ad-hoc dispatches).
+#
+# dry-run: true initially — verify the planned deletions in a run summary
+# before flipping to false.
+
+on:
+  schedule:
+    - cron: '0 5 * * 3'  # Wednesday 05:00 UTC, day after the weekly build
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry run (list deletions without performing them)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: ghcr-prune
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          package: php-docker
+          delete-untagged: true
+          older-than: 28d
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || true }}
