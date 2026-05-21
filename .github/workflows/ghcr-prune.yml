@@ -8,19 +8,16 @@ name: GHCR untagged prune
 #
 # older-than: 28 days keeps a buffer wide enough to survive 2-3 weeks without
 # a successful build (weekly schedule + ad-hoc dispatches).
-#
-# dry-run: true initially — verify the planned deletions in a run summary
-# before flipping to false.
 
 on:
   schedule:
-    - cron: '55 2 * * *'  # TEMP one-shot test 2026-05-21 02:55 UTC; revert to '0 5 * * 3' (Wed) after verification
+    - cron: '0 5 * * 3'  # Weekly Wed 05:00 UTC
   workflow_dispatch:
     inputs:
       dry-run:
         description: 'Dry run (list deletions without performing them)'
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: ghcr-prune
