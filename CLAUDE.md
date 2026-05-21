@@ -37,6 +37,8 @@ Key matrix rules:
 - Multi-arch production builds: linux/amd64, linux/arm64, linux/arm/v7
 - PR fast-path tests only newest + oldest PHP versions (currently 8.5 + 8.2); push/schedule runs the full matrix
 
+Trigger filtering: `docker-ci.yml` uses an **include-list** under `on.push.paths` and `on.pull_request.paths` so unrelated changes (other workflows, docs) don't fire the full matrix. When adding any file that affects the built image or build pipeline (new Dockerfile, file COPYed in by a Dockerfile, s6 service script, etc.), add it to BOTH the `push` and `pull_request` `paths:` blocks in the same commit.
+
 ## Architecture: v1 vs v2
 
 **v1 (Dockerfile.v1)**: Simple single-stage build. No init system. Base images from ECR (`public.ecr.aws/docker/library/php`). Suited for single-process containers.

@@ -6,21 +6,28 @@ on:
     # every branch push plus pull_request creates duplicate runs when a PR
     # receives new commits because GitHub emits both push and pull_request
     # events for the same push. Restrict push to main to avoid that.
+    #
+    # paths: include-list of build-relevant files only — keeps unrelated
+    # changes (other workflows, docs, repo housekeeping) from triggering the
+    # full image matrix. Update this list when adding new files that affect
+    # the built image or the build pipeline itself.
     branches:
       - 'main'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
+    paths:
+      - 'Dockerfile.v1'
+      - 'Dockerfile.v2'
+      - 's6-overlay/**'
+      - 'extras/retry.sh'
+      - '.github/workflows/docker-ci.yml'
   pull_request:
     branches:
       - '**'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
+    paths:
+      - 'Dockerfile.v1'
+      - 'Dockerfile.v2'
+      - 's6-overlay/**'
+      - 'extras/retry.sh'
+      - '.github/workflows/docker-ci.yml'
   schedule:
     - cron: '0 3 * * 2'  # Weekly on Tuesday at 3:00 AM UTC
   workflow_dispatch:
