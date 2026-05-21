@@ -6,15 +6,15 @@ name: GHCR untagged prune
 # before applying any deletion rule, so the per-arch digests referenced by
 # current tags are safe even though they appear untagged in the GHCR UI.
 #
-# older-than: 28d keeps a buffer wide enough to survive 2-3 weeks without a
-# successful build (weekly schedule + ad-hoc dispatches).
+# older-than: 28 days keeps a buffer wide enough to survive 2-3 weeks without
+# a successful build (weekly schedule + ad-hoc dispatches).
 #
 # dry-run: true initially — verify the planned deletions in a run summary
 # before flipping to false.
 
 on:
   schedule:
-    - cron: '0 5 * * 3'  # Wednesday 05:00 UTC, day after the weekly build
+    - cron: '55 2 * * *'  # TEMP one-shot test 2026-05-21 02:55 UTC; revert to '0 5 * * 3' (Wed) after verification
   workflow_dispatch:
     inputs:
       dry-run:
@@ -36,5 +36,5 @@ jobs:
         with:
           package: php-docker
           delete-untagged: true
-          older-than: 28d
+          older-than: 28 days
           dry-run: ${{ github.event_name != 'workflow_dispatch' || inputs.dry-run }}
