@@ -367,8 +367,10 @@ jobs:
           echo "✅ Apache version check passed"
           echo "::endgroup::"
 
-      # Trivy gates the publish step. exit-code: 1 fails the job on
-      # CRITICAL/HIGH so vulnerable images can't reach the registries.
+      # Report-only scan: findings are uploaded to the Security tab but never
+      # block the build or publish. The OS layer comes from upstream base
+      # images, so CRITICAL/HIGH CVEs there are tracked for visibility rather
+      # than gated on (we can't patch faster than upstream rebuilds).
       # ignore-unfixed: true filters out advisories with no upstream fix.
       - name: Trivy vulnerability scan
         if: matrix.arch == 'amd64'
@@ -379,7 +381,7 @@ jobs:
           format: 'sarif'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: '0'
           output: 'trivy-results-${{ matrix.variant }}-${{ matrix.php-version }}-${{ matrix.php-type }}-${{ matrix.php-base }}.sarif'
 
       - name: Upload Trivy results
