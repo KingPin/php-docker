@@ -42,6 +42,7 @@ jobs:
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       publish_matrix: ${{ steps.matrix.outputs.publish_matrix }}
+      arch_count: ${{ steps.matrix.outputs.arch_count }}
       s6_version: ${{ steps.s6.outputs.version }}
     steps:
       - name: Compute build matrices
@@ -109,6 +110,9 @@ jobs:
 
           echo "build_matrix=$BUILD_MATRIX" >> $GITHUB_OUTPUT
           echo "publish_matrix=$PUBLISH_MATRIX" >> $GITHUB_OUTPUT
+          # Expected number of per-arch builds per tuple. The publish job uses
+          # this to refuse a partial-arch manifest when a build leg flaked.
+          echo "arch_count=$(echo "$ARCHES" | jq 'length')" >> $GITHUB_OUTPUT
 
       - name: Get latest s6-overlay version
         id: s6
@@ -444,7 +448,17 @@ jobs:
 
   publish-merge:
     needs: [setup, build]
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+    # Run per-tuple even when SOME build legs failed. `build` is one matrix
+    # job, so a single failed leg would otherwise mark it failed and skip
+    # every publish. `!cancelled() && needs.setup.result == 'success'` lets
+    # publish proceed regardless of build's aggregate result; the digest
+    # completeness guard below fails only the tuples that are actually
+    # missing an arch, so one flake no longer blocks all ~30 publishes.
+    if: >-
+      !cancelled()
+      && needs.setup.result == 'success'
+      && github.ref == 'refs/heads/main'
+      && (github.event_name == 'push' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -462,6 +476,7 @@ jobs:
       VARIANT: ${{ matrix.variant }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       STAGING_NAME: ghcr.io/kingpin/php-docker
+      EXPECTED_ARCHES: ${{ needs.setup.outputs.arch_count }}
 
     steps:
       - name: Setup Docker Buildx
@@ -511,10 +526,21 @@ jobs:
             EXTRA_TAGS="${PHP_VERSION}-${PHP_TYPE}-bookworm${SUFFIX}"
           fi
 
+          mkdir -p /tmp/digests
           cd /tmp/digests
           DIGEST_FILES=$(ls -1)
-          if [ -z "$DIGEST_FILES" ]; then
-            echo "::error::No digests found for $VERSION$SUFFIX"
+          DIGEST_COUNT=$(ls -1 | wc -l | tr -d ' ')
+          # Completeness guard: refuse to publish unless every expected arch
+          # built. A partial set means a build leg flaked — publishing a
+          # 2-of-3-arch manifest would silently break consumers on the missing
+          # arch. Fail only THIS tuple (re-runnable via `gh run rerun
+          # --failed`); other tuples publish normally.
+          if [ "$DIGEST_COUNT" -eq 0 ]; then
+            echo "::error::No digests found for $VERSION$SUFFIX — all arch builds for this tuple failed. Re-run failed build jobs, then re-run publish."
+            exit 1
+          fi
+          if [ "$DIGEST_COUNT" -lt "${EXPECTED_ARCHES:-0}" ]; then
+            echo "::error::Incomplete arch set for $VERSION$SUFFIX: found $DIGEST_COUNT of $EXPECTED_ARCHES arch digests. Refusing to publish a partial-arch manifest. Re-run the failed build job, then re-run this publish."
             exit 1
           fi
           # imagetools create copies blobs across registries as needed; the
