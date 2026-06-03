@@ -1,0 +1,37 @@
+name: Auto-rerun flaky CI
+
+# Some Docker CI matrix jobs flake transiently (e.g. extension download
+# hiccups, registry blips). When the main CI run finishes in a failed state
+# this workflow re-runs ONLY the failed jobs, up to a small attempt cap, so a
+# genuine break still surfaces red instead of looping forever.
+#
+# workflow_run fires the instant "Docker CI (v1 + v2)" completes — no timing
+# guesswork, and it never touches a still-running job.
+
+on:
+  workflow_run:
+    workflows: ["Docker CI (v1 + v2)"]
+    types: [completed]
+
+permissions:
+  actions: write   # required to call `gh run rerun`
+
+jobs:
+  rerun:
+    runs-on: ubuntu-latest
+    # Act only on genuine failures, and stop after the original run + 2
+    # auto-retries (run_attempt 1, 2, 3). Re-running re-emits this same event
+    # with an incremented run_attempt, so this guard is what prevents an
+    # infinite retry loop.
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt < 3
+    steps:
+      - name: Re-run only the failed jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          echo "Run $RUN_ID failed on attempt $ATTEMPT — re-running failed jobs"
+          gh run rerun "$RUN_ID" --failed -R "${{ github.repository }}"
