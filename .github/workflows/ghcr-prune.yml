@@ -34,4 +34,4 @@ jobs:
           package: php-docker
           delete-untagged: true
           older-than: 28 days
-          dry-run: ${{ github.event_name != 'workflow_dispatch' || inputs.dry-run }}
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
