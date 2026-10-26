@@ -163,8 +163,16 @@ jobs:
         with:
           platforms: ${{ matrix.platform }}
 
+      # Pull Docker Hub base images through mirror.gcr.io so the matrix's
+      # pull burst doesn't hit anonymous rate limits (ECR Public and Docker
+      # Hub both 429). BuildKit falls back to docker.io when the mirror
+      # hasn't cached a blob yet, which a direct FROM mirror.gcr.io can't do.
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
+        with:
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
 
       - name: Set build variables
         id: vars
