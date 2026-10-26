@@ -41,7 +41,7 @@ Trigger filtering: `docker-ci.yml` uses an **include-list** under `on.push.paths
 
 ## Architecture: v1 vs v2
 
-**v1 (Dockerfile.v1)**: Simple single-stage build. No init system. Base images from ECR (`public.ecr.aws/docker/library/php`). Suited for single-process containers.
+**v1 (Dockerfile.v1)**: Simple single-stage build. No init system. Base images from Google's Docker Hub mirror (`mirror.gcr.io/library/php`). Suited for single-process containers.
 
 **v2 (Dockerfile.v2)**: s6-overlay for process supervision (version is configurable via the `S6_OVERLAY_VERSION` build arg; CI resolves the latest release from GitHub at build time, the Dockerfile default is currently `v3.2.1.0`). OCI labels. Handles Debian Trixie t64 library transitions. BuildKit required. Production multi-process workloads.
 
@@ -57,7 +57,7 @@ Both install 30+ PHP extensions via `install-php-extensions` (with retry/backoff
 
 - ARM/v7: GD built without AVIF support (no AV1 on armv7)
 - Trixie (v2): requires t64 library name handling (`libavif-dev` vs `libavif-devt64`)
-- ECR base images preferred over Docker Hub to avoid rate limits
+- Base images come from `mirror.gcr.io` (same digests as Docker Hub). Docker Hub and ECR Public both return 429s to the CI matrix's anonymous pull burst
 - install-php-extensions download has retry logic with exponential backoff
 
 ## Documentation Checks

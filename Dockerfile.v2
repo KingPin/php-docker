@@ -1,6 +1,6 @@
 ARG VERSION=8.3-cli-alpine
 
-FROM public.ecr.aws/docker/library/php:${VERSION}
+FROM mirror.gcr.io/library/php:${VERSION}
 ARG PHPVERSION
 ARG BASEOS
 ARG S6_OVERLAY_VERSION=v3.2.1.0
